@@ -1,12 +1,21 @@
 """TTS engine models."""
 from .base import BaseTTSEngine, EmbeddingResult, AudioResult
 from .chatterbox_wrapper import ChatterboxWrapper
+from .rvc_wrapper import RVCWrapper
+from .separator import DemucsWrapper, SeparationResult
 
 __all__ = [
+    # Base
     "BaseTTSEngine",
     "EmbeddingResult",
     "AudioResult",
+    # TTS
     "ChatterboxWrapper",
+    # Voice Conversion
+    "RVCWrapper",
+    # Separation
+    "DemucsWrapper",
+    "SeparationResult",
 ]
 
 
