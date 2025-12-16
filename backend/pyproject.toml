@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "parrotcore"
+version = "0.1.0"
+description = "Voice cloning TTS platform"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    # Django & API
+    "django>=4.2",
+    "djangorestframework>=3.14",
+    "django-cors-headers>=4.0",
+    
+    # Async tasks
+    "celery[redis]>=5.3",
+    
+    # Database
+    "psycopg2-binary>=2.9",
+    
+    # Storage
+    "boto3>=1.28",
+    
+    # TTS dependencies
+    "torch>=2.0",
+    "torchaudio>=2.0",
+    
+    # Auth
+    "djangorestframework-simplejwt>=5.3",
+    
+    # Utils
+    "python-dotenv>=1.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-django>=4.5",
+    "ipython>=8.0",
+    "jupyter>=1.0",
+    "black>=23.0",
+    "ruff>=0.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend", "tts_engine"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
