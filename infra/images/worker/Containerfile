@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    libsndfile1 \
+    ffmpeg \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml README.md ./
+RUN pip install --upgrade pip && pip install .
+
+COPY backend/ ./backend/
+COPY tts_engine/ ./tts_engine/
+
+RUN useradd --create-home appuser && chown -R appuser:appuser /app
+USER appuser
+
+CMD ["celery", "-A", "backend.parrotcore", "worker", "--loglevel=info"]
