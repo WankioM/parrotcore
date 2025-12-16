@@ -135,9 +135,6 @@ def enroll(
         if engine_name == "chatterbox":
             from ..models.chatterbox_wrapper import ChatterboxWrapper
             engine = ChatterboxWrapper(device=device)
-        elif engine_name == "f5tts":
-            from ..models.f5tts_wrapper import F5TTSWrapper
-            engine = F5TTSWrapper(device=device)
         else:
             raise ValueError(f"Unknown engine: {engine_name}")
     
