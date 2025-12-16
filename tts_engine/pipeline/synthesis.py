@@ -163,7 +163,6 @@ def synthesize(
     Returns:
         AudioResult
     """
-    # Auto-detect engine from embedding if not provided
     if engine is None:
         with open(embedding_path, "rb") as f:
             embedding_data = pickle.load(f)
@@ -173,9 +172,6 @@ def synthesize(
         if engine_name == "chatterbox":
             from ..models.chatterbox_wrapper import ChatterboxWrapper
             engine = ChatterboxWrapper(device=device)
-        elif engine_name == "f5tts":
-            from ..models.f5tts_wrapper import F5TTSWrapper
-            engine = F5TTSWrapper(device=device)
         else:
             raise ValueError(f"Unknown engine in embedding: {engine_name}")
     

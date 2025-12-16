@@ -1,0 +1,360 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# TTS Engine Playground\n",
+    "\n",
+    "Test the TTS engine package in isolation before integrating with the web stack."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Add parent directory to path so we can import tts_engine\n",
+    "import sys\n",
+    "from pathlib import Path\n",
+    "\n",
+    "# Go up from examples/ to project root\n",
+    "project_root = Path.cwd().parent\n",
+    "if str(project_root) not in sys.path:\n",
+    "    sys.path.insert(0, str(project_root))\n",
+    "\n",
+    "print(f\"Project root: {project_root}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Test imports\n",
+    "from tts_engine import (\n",
+    "    get_engine,\n",
+    "    enroll,\n",
+    "    synthesize,\n",
+    "    load_audio,\n",
+    "    save_audio,\n",
+    "    get_audio_duration,\n",
+    ")\n",
+    "\n",
+    "print(\"Imports successful!\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Setup\n",
+    "\n",
+    "Create directories and download a sample audio file for testing."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create test directories\n",
+    "test_dir = Path(\"test_data\")\n",
+    "samples_dir = test_dir / \"samples\"\n",
+    "output_dir = test_dir / \"output\"\n",
+    "\n",
+    "samples_dir.mkdir(parents=True, exist_ok=True)\n",
+    "output_dir.mkdir(parents=True, exist_ok=True)\n",
+    "\n",
+    "print(f\"Samples dir: {samples_dir}\")\n",
+    "print(f\"Output dir: {output_dir}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Option 1: Record your own voice sample\n",
+    "# Save a ~10 second WAV file as samples/sample1.wav\n",
+    "\n",
+    "# Option 2: Use a sample from the web (for testing only)\n",
+    "import urllib.request\n",
+    "\n",
+    "sample_url = \"https://www2.cs.uic.edu/~i101/SoundFiles/gettysburg.wav\"\n",
+    "sample_path = samples_dir / \"sample1.wav\"\n",
+    "\n",
+    "if not sample_path.exists():\n",
+    "    print(f\"Downloading sample from {sample_url}...\")\n",
+    "    urllib.request.urlretrieve(sample_url, sample_path)\n",
+    "    print(f\"Saved to {sample_path}\")\n",
+    "else:\n",
+    "    print(f\"Sample already exists: {sample_path}\")\n",
+    "\n",
+    "# Check duration\n",
+    "duration = get_audio_duration(sample_path)\n",
+    "print(f\"Sample duration: {duration:.1f}s\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Test Audio Utils"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from tts_engine.utils.audio import load_audio, normalize_audio, trim_silence\n",
+    "\n",
+    "# Load and process audio\n",
+    "audio, sr = load_audio(sample_path)\n",
+    "print(f\"Loaded audio: {len(audio)} samples at {sr}Hz\")\n",
+    "print(f\"Duration: {len(audio)/sr:.2f}s\")\n",
+    "print(f\"Range: [{audio.min():.3f}, {audio.max():.3f}]\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Normalize\n",
+    "normalized = normalize_audio(audio)\n",
+    "print(f\"Normalized range: [{normalized.min():.3f}, {normalized.max():.3f}]\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Play audio (if IPython is available)\n",
+    "try:\n",
+    "    from IPython.display import Audio, display\n",
+    "    display(Audio(audio, rate=sr))\n",
+    "except ImportError:\n",
+    "    print(\"IPython not available for audio playback\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Test Engine Availability"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Check which engines are available\n",
+    "from tts_engine.models import ChatterboxWrapper, F5TTSWrapper\n",
+    "\n",
+    "device = \"cuda\"  # Change to \"cpu\" if no GPU\n",
+    "\n",
+    "chatterbox = ChatterboxWrapper(device=device)\n",
+    "f5tts = F5TTSWrapper(device=device)\n",
+    "\n",
+    "print(f\"Chatterbox available: {chatterbox.is_available()}\")\n",
+    "print(f\"F5-TTS available: {f5tts.is_available()}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Voice Enrollment"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Enroll a voice\n",
+    "samples = list(samples_dir.glob(\"*.wav\"))\n",
+    "print(f\"Found {len(samples)} samples: {samples}\")\n",
+    "\n",
+    "embedding_path = output_dir / \"test_voice.pkl\"\n",
+    "\n",
+    "# Use whichever engine is available\n",
+    "engine_name = \"chatterbox\" if chatterbox.is_available() else \"f5tts\"\n",
+    "print(f\"Using engine: {engine_name}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Run enrollment\n",
+    "result = enroll(\n",
+    "    samples=samples,\n",
+    "    output_path=embedding_path,\n",
+    "    engine_name=engine_name,\n",
+    "    device=device,\n",
+    ")\n",
+    "\n",
+    "print(f\"Success: {result.success}\")\n",
+    "print(f\"Embedding: {result.embedding_path}\")\n",
+    "print(f\"Samples used: {result.sample_count}\")\n",
+    "print(f\"Total duration: {result.total_duration_seconds:.1f}s\")\n",
+    "if result.error_message:\n",
+    "    print(f\"Error: {result.error_message}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Speech Synthesis"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Synthesize some text\n",
+    "test_text = \"Hello! This is a test of the text to speech system. How does it sound?\"\n",
+    "\n",
+    "audio_result = synthesize(\n",
+    "    embedding_path=embedding_path,\n",
+    "    text=test_text,\n",
+    "    output_path=output_dir / \"test_output.wav\",\n",
+    "    device=device,\n",
+    ")\n",
+    "\n",
+    "print(f\"Success: {audio_result.success}\")\n",
+    "print(f\"Duration: {audio_result.duration_seconds:.2f}s\")\n",
+    "print(f\"Sample rate: {audio_result.sample_rate}Hz\")\n",
+    "if audio_result.error_message:\n",
+    "    print(f\"Error: {audio_result.error_message}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Play the generated audio\n",
+    "if audio_result.success:\n",
+    "    try:\n",
+    "        from IPython.display import Audio, display\n",
+    "        display(Audio(audio_result.audio_array, rate=audio_result.sample_rate))\n",
+    "    except ImportError:\n",
+    "        print(f\"Audio saved to {output_dir / 'test_output.wav'}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Test Long Text (Chunking)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "long_text = \"\"\"\n",
+    "This is a much longer piece of text that will test the chunking functionality.\n",
+    "The system should automatically split this into multiple chunks and synthesize each one.\n",
+    "Then it will concatenate them together with small pauses between each chunk.\n",
+    "This ensures that we can handle arbitrarily long text without running into memory issues.\n",
+    "The quality should remain consistent throughout the generated audio.\n",
+    "\"\"\".strip()\n",
+    "\n",
+    "print(f\"Text length: {len(long_text)} characters\")\n",
+    "\n",
+    "long_result = synthesize(\n",
+    "    embedding_path=embedding_path,\n",
+    "    text=long_text,\n",
+    "    output_path=output_dir / \"test_long.wav\",\n",
+    "    device=device,\n",
+    ")\n",
+    "\n",
+    "print(f\"Success: {long_result.success}\")\n",
+    "print(f\"Duration: {long_result.duration_seconds:.2f}s\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Play long audio\n",
+    "if long_result.success:\n",
+    "    try:\n",
+    "        from IPython.display import Audio, display\n",
+    "        display(Audio(long_result.audio_array, rate=long_result.sample_rate))\n",
+    "    except ImportError:\n",
+    "        print(f\"Audio saved to {output_dir / 'test_long.wav'}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Cleanup"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# List generated files\n",
+    "print(\"Generated files:\")\n",
+    "for f in output_dir.glob(\"*\"):\n",
+    "    print(f\"  {f.name} ({f.stat().st_size / 1024:.1f} KB)\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Optional: Clean up test files\n",
+    "# import shutil\n",
+    "# shutil.rmtree(test_dir)\n",
+    "# print(\"Cleaned up test directory\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
