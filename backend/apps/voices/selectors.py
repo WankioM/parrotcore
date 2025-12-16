@@ -1,5 +1,5 @@
 """Voice profile queries."""
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID
 from django.db.models import QuerySet, Sum, Count
 from django.contrib.auth import get_user_model
@@ -11,11 +11,14 @@ from .models import (
     VoiceProfileStatus,
 )
 
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractUser
+
 User = get_user_model()
 
 
 def get_user_voice_profiles(
-    user: User,
+    user: "AbstractUser",
     status: Optional[VoiceProfileStatus] = None,
 ) -> QuerySet[VoiceProfile]:
     """
@@ -36,7 +39,7 @@ def get_user_voice_profiles(
 
 def get_voice_profile(
     profile_id: UUID,
-    user: Optional[User] = None,
+    user: Optional["AbstractUser"] = None,
 ) -> Optional[VoiceProfile]:
     """
     Get a voice profile by ID.
@@ -54,7 +57,7 @@ def get_voice_profile(
     return qs.filter(id=profile_id).first()
 
 
-def get_ready_voice_profiles(user: User) -> QuerySet[VoiceProfile]:
+def get_ready_voice_profiles(user: "AbstractUser") -> QuerySet[VoiceProfile]:
     """Get all ready-to-use voice profiles for a user."""
     return get_user_voice_profiles(user, status=VoiceProfileStatus.READY)
 
