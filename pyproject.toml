@@ -28,6 +28,12 @@ dependencies = [
     "torchaudio>=2.0",
     "numpy>=1.24",  
     
+    # Voice Conversion
+    "rvc-python>=0.2.0",
+    
+    # Vocal Separation
+    "demucs>=4.0",
+    
     # Auth
     "djangorestframework-simplejwt>=5.3",
     
