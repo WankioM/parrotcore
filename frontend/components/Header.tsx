@@ -1,7 +1,18 @@
 import React from 'react';
 import Link from 'next/link';
+import { authService } from '@/lib/services/auth';
 
 export const Header: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsAuthenticated(authService.isAuthenticated());
+  }, []);
+
+  const handleLogout = () => {
+    authService.logout();
+  };
+
   return (
     <header className="bg-white border-b border-gray-200">
       <nav className="editorial-section py-6">
@@ -39,20 +50,32 @@ export const Header: React.FC = () => {
             >
               About
             </Link>
-            <Link 
-              href="/auth/signin" 
-              className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
-            >
-              Sign In
-            </Link>
-            <Link 
-              href="/auth/signup" 
-              className="px-6 py-2 bg-cayenne text-white font-semibold rounded-lg text-sm
-                       hover:bg-cayenne transition-all shadow-sm"
-              style={{ opacity: 0.95 }}
-            >
-              Sign Up
-            </Link>
+            
+            {isAuthenticated ? (
+              <button
+                onClick={handleLogout}
+                className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
+              >
+                Logout
+              </button>
+            ) : (
+              <>
+                <Link 
+                  href="/auth/signin" 
+                  className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
+                >
+                  Sign In
+                </Link>
+                <Link 
+                  href="/auth/signup" 
+                  className="px-6 py-2 bg-cayenne text-white font-semibold rounded-lg text-sm
+                           hover:bg-cayenne transition-all shadow-sm"
+                  style={{ opacity: 0.95 }}
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>

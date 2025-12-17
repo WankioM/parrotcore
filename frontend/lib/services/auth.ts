@@ -9,15 +9,29 @@ import {
 export const authService = {
   async signup(data: SignupRequest): Promise<AuthResponse> {
     const response = await apiClient.post('/auth/signup/', data);
-    const authData = response.data;
+    const authData = {
+      access_token: response.data.access,
+      refresh_token: response.data.refresh,
+      user: response.data.user || { id: '', email: data.email },
+    };
     this.setToken(authData.access_token);
     this.setRefreshToken(authData.refresh_token);
     return authData;
   },
 
   async signin(data: SigninRequest): Promise<AuthResponse> {
-    const response = await apiClient.post('/auth/token/', data);
-    const authData = response.data;
+    // Django expects 'username' field, not 'email'
+    const response = await apiClient.post('/auth/token/', {
+      username: data.email,
+      password: data.password,
+    });
+    
+    const authData = {
+      access_token: response.data.access,
+      refresh_token: response.data.refresh,
+      user: { id: '', email: data.email }, // Django doesn't return user in token endpoint
+    };
+    
     this.setToken(authData.access_token);
     this.setRefreshToken(authData.refresh_token);
     return authData;
@@ -25,11 +39,16 @@ export const authService = {
 
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     const response = await apiClient.post('/auth/token/refresh/', {
-      refresh_token: refreshToken,
+      refresh: refreshToken,
     });
-    const authData = response.data;
+    
+    const authData = {
+      access_token: response.data.access,
+      refresh_token: refreshToken, // Refresh token stays the same
+      user: { id: '', email: '' },
+    };
+    
     this.setToken(authData.access_token);
-    this.setRefreshToken(authData.refresh_token);
     return authData;
   },
 
