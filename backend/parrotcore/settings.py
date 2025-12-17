@@ -99,6 +99,28 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # CORS
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 
-# Celery
+# =============================================================================
+# CELERY CONFIGURATION
+# =============================================================================
+
 CELERY_BROKER_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+
+# Task settings
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per task
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # Soft limit at 25 minutes
+
+# Serialization
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+
+# Task routing (optional, for future scaling)
+CELERY_TASK_ROUTES = {
+    "apps.voices.tasks.*": {"queue": "voice"},
+    "apps.tts.tasks.*": {"queue": "tts"},
+}
+
+# Default queue
+CELERY_TASK_DEFAULT_QUEUE = "default"
