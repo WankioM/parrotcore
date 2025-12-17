@@ -20,6 +20,7 @@ urlpatterns = [
     # Auth
     path("v1/auth/token/", TokenObtainPairView.as_view(), name="token-obtain"),
     path("v1/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("v1/auth/signup/", views.signup, name="signup"),
     
     # API routes
     path("v1/", include(router.urls)),

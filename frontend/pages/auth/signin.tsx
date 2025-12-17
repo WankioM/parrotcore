@@ -24,7 +24,7 @@ export default function Signin() {
 
     try {
       const result = await authService.signin({
-        email: formData.email,
+        username: formData.email,
         password: formData.password,
       });
 

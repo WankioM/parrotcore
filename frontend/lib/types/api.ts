@@ -134,12 +134,13 @@ export interface AuthResponse {
 }
 
 export interface SignupRequest {
+  username: string;  
   email: string;
   password: string;
 }
 
 export interface SigninRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
