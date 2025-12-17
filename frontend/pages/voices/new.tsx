@@ -1,14 +1,34 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { voicesService } from '@/lib/services/voices';
 
 export default function NewVoice() {
+  const router = useRouter();
   const [voiceName, setVoiceName] = useState('');
   const [description, setDescription] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: API integration
-    console.log('Creating voice profile:', { voiceName, description });
+    setError(null);
+    setIsCreating(true);
+
+    try {
+      // Create voice profile via API
+      const profile = await voicesService.createVoiceProfile({
+        name: voiceName,
+        description: description || undefined,
+      });
+
+      // Navigate to the voice detail page
+      router.push(`/voices/${profile.id}`);
+    } catch (err: any) {
+      console.error('Error creating voice profile:', err);
+      setError(err.response?.data?.error || 'Failed to create voice profile. Please try again.');
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -30,6 +50,13 @@ export default function NewVoice() {
 
         {/* Main Content */}
         <div className="max-w-3xl">
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
           {/* Step 1: Basic Info */}
           <div className="bg-white border-2 border-gray-200 rounded-xl p-8 mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -52,6 +79,7 @@ export default function NewVoice() {
                            focus:border-cayenne focus:outline-none transition-colors
                            text-gray-900"
                   required
+                  disabled={isCreating}
                 />
               </div>
 
@@ -69,16 +97,26 @@ export default function NewVoice() {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg
                            focus:border-cayenne focus:outline-none transition-colors
                            text-gray-900 resize-none"
+                  disabled={isCreating}
                 />
               </div>
 
               <button
                 type="submit"
+                disabled={isCreating}
                 className="w-full py-4 bg-cayenne text-white font-bold text-lg rounded-lg
-                         hover:bg-cayenne transition-all shadow-lg"
-                style={{ opacity: 0.95 }}
+                         hover:bg-cayenne transition-all shadow-lg disabled:opacity-50
+                         disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                style={{ opacity: isCreating ? 0.5 : 0.95 }}
               >
-                Create Profile & Upload Samples
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
+                    Creating Profile...
+                  </>
+                ) : (
+                  'Create Profile & Upload Samples'
+                )}
               </button>
             </form>
           </div>
