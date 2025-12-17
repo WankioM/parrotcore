@@ -8,28 +8,38 @@ import {
 
 export const authService = {
   async signup(data: SignupRequest): Promise<AuthResponse> {
-    const response = await apiClient.post('/auth/signup/', data);
-    const authData = {
-      access_token: response.data.access,
-      refresh_token: response.data.refresh,
-      user: response.data.user || { id: '', email: data.email },
-    };
-    this.setToken(authData.access_token);
-    this.setRefreshToken(authData.refresh_token);
-    return authData;
-  },
+  const response = await apiClient.post('/auth/signup/', {
+    username: data.username,  // ✅ Include username
+    email: data.email,
+    password: data.password,
+  });
+  
+  const authData = {
+    access_token: response.data.access,
+    refresh_token: response.data.refresh,
+    user: response.data.user || { 
+      id: '', 
+      email: data.email,
+      username: data.username  // ✅ Include username
+    },
+  };
+  
+  this.setToken(authData.access_token);
+  this.setRefreshToken(authData.refresh_token);
+  return authData;
+},
 
   async signin(data: SigninRequest): Promise<AuthResponse> {
     // Django expects 'username' field, not 'email'
     const response = await apiClient.post('/auth/token/', {
-      username: data.email,
+      username: data.username,
       password: data.password,
     });
     
     const authData = {
       access_token: response.data.access,
       refresh_token: response.data.refresh,
-      user: { id: '', email: data.email }, // Django doesn't return user in token endpoint
+      user: { id: '', email: data.username}, // Django doesn't return user in token endpoint
     };
     
     this.setToken(authData.access_token);
