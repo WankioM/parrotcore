@@ -6,21 +6,34 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     libsndfile1 \
     ffmpeg \
     curl \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml README.md ./
-RUN pip install --upgrade pip && pip install .
+# Copy requirements and install Python dependencies
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r backend/requirements.txt
 
+# Copy application code
 COPY backend/ ./backend/
 COPY tts_engine/ ./tts_engine/
 
+# Add to PYTHONPATH
+ENV PYTHONPATH=/app:/app/backend:/app/tts_engine:$PYTHONPATH
+
+# Create non-root user
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 
-CMD ["celery", "-A", "backend.parrotcore", "worker", "--loglevel=info"]
+# Set working directory to backend
+WORKDIR /app/backend
+
+# Run Celery worker
+CMD ["celery", "-A", "parrotcore", "worker", "--loglevel=info"]
