@@ -1,22 +1,62 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { authService } from '@/lib/services/auth';
 
 export default function Signup() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
+    username: '',       
     email: '',
     password: '',
     confirmPassword: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Handle signup logic
-    console.log('Signup:', formData);
+    setError(null);
+
+    // ✅ Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    // ✅ Validate password length
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await authService.signup({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // ✅ Redirect on success
+      router.push('/');
+    } catch (err: any) {
+      console.error('Signup failed:', err.response?.data);
+      setError(
+        err.response?.data?.detail || 
+        err.response?.data?.username?.[0] ||
+        err.response?.data?.email?.[0] ||
+        'Failed to create account. Please try again.'
+      );
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Form */}
+     {/* Left Panel - Form */}
       <div className="w-full lg:w-1/2 bg-coffee flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           {/* Logo/Back */}
@@ -39,8 +79,34 @@ export default function Signup() {
             </p>
           </div>
 
+          {/* ✅ Error Display */}
+          {error && (
+            <div className="bg-red-500/10 border-l-4 border-red-500 p-4 mb-6">
+              <p className="text-red-400 text-sm font-medium">{error}</p>
+            </div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* ✅ Username Input - ADD THIS */}
+            <div>
+              <label htmlFor="username" className="block text-white/80 font-medium mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                id="username"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                className="w-full px-4 py-3 bg-twilight/50 border-2 border-white/10 
+                         rounded-lg text-white placeholder-white/40
+                         focus:border-cayenne focus:outline-none transition-colors"
+                placeholder="johndoe"
+                required
+                disabled={isLoading}
+              />
+            </div>
+
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-white/80 font-medium mb-2">
@@ -56,6 +122,7 @@ export default function Signup() {
                          focus:border-cayenne focus:outline-none transition-colors"
                 placeholder="your@email.com"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -74,6 +141,8 @@ export default function Signup() {
                          focus:border-cayenne focus:outline-none transition-colors"
                 placeholder="••••••••"
                 required
+                minLength={8}
+                disabled={isLoading}
               />
             </div>
 
@@ -92,6 +161,7 @@ export default function Signup() {
                          focus:border-cayenne focus:outline-none transition-colors"
                 placeholder="••••••••"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -102,6 +172,7 @@ export default function Signup() {
                 id="terms"
                 className="mt-1 w-4 h-4 accent-cayenne"
                 required
+                disabled={isLoading}
               />
               <label htmlFor="terms" className="text-white/60 text-sm">
                 I agree to the{' '}
@@ -115,14 +186,23 @@ export default function Signup() {
               </label>
             </div>
 
-            {/* Submit Button */}
+            {/* ✅ Submit Button with Loading State */}
             <button
               type="submit"
+              disabled={isLoading}
               className="w-full py-4 bg-cayenne text-white font-bold text-lg rounded-lg
                        hover:bg-cayenne/90 transition-all shadow-lg shadow-cayenne/30
-                       active:scale-[0.98]"
+                       active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
+                       flex items-center justify-center gap-3"
             >
-              Create Account
+              {isLoading ? (
+                <>
+                  <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
+                  Creating Account...
+                </>
+              ) : (
+                'Create Account'
+              )}
             </button>
           </form>
 
