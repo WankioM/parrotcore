@@ -131,6 +131,151 @@ class VoiceProfileViewSet(viewsets.ViewSet):
     POST   /voices/{id}/enroll/  - Start enrollment
     """
     permission_classes = [IsAuthenticated]
+    # Don't set parser_classes at class level - let DRF use defaults (JSON)
+    
+    def list(self, request):
+        """List all voice profiles for the current user."""
+        profiles = get_user_voice_profiles(request.user)
+        serializer = VoiceProfileSerializer(profiles, many=True)
+        return Response(serializer.data)
+    
+    def create(self, request):
+        """Create a new voice profile."""
+        serializer = VoiceProfileCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        profile = create_voice_profile(
+            user=request.user,
+            name=serializer.validated_data["name"],
+            description=serializer.validated_data.get("description", ""),
+        )
+        
+        return Response(
+            VoiceProfileSerializer(profile).data,
+            status=status.HTTP_201_CREATED,
+        )
+    
+    def retrieve(self, request, pk=None):
+        """Get a voice profile by ID."""
+        try:
+            profile_id = UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid profile ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        profile = get_voice_profile(profile_id, user=request.user)
+        if not profile:
+            return Response(
+                {"error": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        
+        return Response(VoiceProfileSerializer(profile).data)
+    
+    def destroy(self, request, pk=None):
+        """Delete a voice profile."""
+        try:
+            profile_id = UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid profile ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        profile = get_voice_profile(profile_id, user=request.user)
+        if not profile:
+            return Response(
+                {"error": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        
+        VoiceProfileService.delete_voice_profile(profile)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    @action(detail=True, methods=["post"], parser_classes=[MultiPartParser, FormParser])
+    def samples(self, request, pk=None):
+        """Upload a voice sample to a profile."""
+        try:
+            profile_id = UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid profile ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        profile = get_voice_profile(profile_id, user=request.user)
+        if not profile:
+            return Response(
+                {"error": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        
+        if profile.status not in [VoiceProfileStatus.PENDING, VoiceProfileStatus.FAILED]:
+            return Response(
+                {"error": "Cannot add samples to a profile that is enrolling or ready"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        serializer = VoiceSampleUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        uploaded_file = serializer.validated_data["file"]
+        
+        # Upload to storage
+        storage_key = f"samples/{request.user.id}/{profile.id}/{uploaded_file.name}"
+        storage.upload_fileobj(uploaded_file.file, storage_key, content_type=uploaded_file.content_type)
+        
+        # Get audio duration (simplified - in production use proper audio analysis)
+        # For now, estimate based on file size (very rough)
+        estimated_duration = uploaded_file.size / (44100 * 2 * 2)  # Assume 44.1kHz, 16-bit, stereo
+        
+        # Create sample record
+        sample = VoiceProfileService.add_sample(
+            voice_profile=profile,
+            file_path=storage_key,
+            original_filename=uploaded_file.name,
+            duration_seconds=estimated_duration,
+            file_size_bytes=uploaded_file.size,
+        )
+        
+        return Response(
+            VoiceSampleSerializer(sample).data,
+            status=status.HTTP_201_CREATED,
+        )
+    
+    @action(detail=True, methods=["post"])
+    def enroll(self, request, pk=None):
+        """Start voice enrollment for a profile."""
+        try:
+            profile_id = UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid profile ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        profile = get_voice_profile(profile_id, user=request.user)
+        if not profile:
+            return Response(
+                {"error": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        
+        try:
+            job = enroll_voice_profile(profile)
+            return Response(
+                VoiceEnrollmentJobSerializer(job).data,
+                status=status.HTTP_202_ACCEPTED,
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    
+    permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
     
     def list(self, request):
