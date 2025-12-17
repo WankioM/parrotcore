@@ -1,6 +1,6 @@
 """Voice profile business logic."""
 import logging
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from pathlib import Path
 from django.db import transaction
 from django.contrib.auth import get_user_model
@@ -13,6 +13,9 @@ from .models import (
     EnrollmentJobStatus,
 )
 
+if TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractUser
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -23,7 +26,7 @@ class VoiceProfileService:
     @staticmethod
     @transaction.atomic
     def create_voice_profile(
-        user: User,
+        user: "AbstractUser",
         name: str,
         description: str = "",
     ) -> VoiceProfile:
@@ -212,7 +215,7 @@ class VoiceProfileService:
 
 
 # Convenience functions
-def create_voice_profile(user: User, name: str, description: str = "") -> VoiceProfile:
+def create_voice_profile(user: "AbstractUser", name: str, description: str = "") -> VoiceProfile:
     """Create a new voice profile."""
     return VoiceProfileService.create_voice_profile(user, name, description)
 
