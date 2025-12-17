@@ -7,9 +7,12 @@ export default function Home() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Parrot Core</h1>
-        <p style={styles.subtitle}>AI Voice Cloning & Text-to-Speech</p>
-      </header>
+            <h1 style={styles.title}>Parrot Core</h1>
+            <p style={styles.subtitle}>AI Voice Cloning & Text-to-Speech</p>
+            <Link href="/about" style={styles.aboutLink}>
+                Get to Know Us →
+            </Link>
+            </header>
 
       <div style={styles.gradientShowcase}>
         <AudioGradient variant="wave" size={120} />
@@ -94,4 +97,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: colors.white,
     opacity: 0.7,
   },
+  aboutLink: {
+  display: 'inline-block',
+  marginTop: '1rem',
+  fontSize: '1rem',
+  color: colors.cayenneRed,
+  textDecoration: 'none',
+  fontWeight: 600,
+  transition: 'opacity 0.2s',
+},
 };
