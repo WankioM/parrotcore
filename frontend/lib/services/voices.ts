@@ -15,6 +15,36 @@ export const voicesService = {
     return response.data;
   },
 
+
+  async pollEnrollmentStatus(
+  profileId: string,
+  onProgress?: (profile: VoiceProfile) => void,
+  pollInterval: number = 3000
+): Promise<VoiceProfile> {
+  return new Promise((resolve, reject) => {
+    const poll = async () => {
+      try {
+        const profile = await this.getVoiceProfile(profileId);
+        
+        if (onProgress) {
+          onProgress(profile);
+        }
+
+        if (profile.status === 'ready') {
+          resolve(profile);
+        } else if (profile.status === 'failed') {
+          reject(new Error('Enrollment failed'));
+        } else {
+          setTimeout(poll, pollInterval);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    poll();
+  });
+},
   // Get single voice profile with samples and enrollment status
   async getVoiceProfile(id: string): Promise<VoiceProfile> {
     const response = await apiClient.get(`/voices/${id}/`);
