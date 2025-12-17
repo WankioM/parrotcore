@@ -139,7 +139,7 @@ export default function Signup() {
       </div>
 
       {/* Right Panel - Visual */}
-      <div className="hidden lg:block lg:w-1/2 relative bg-gradient-to-br from-twilight to-coffee overflow-hidden">
+      <div className="hidden lg:block lg:w-1/2 relative bg-linear-to-br from-twilight to-coffee overflow-hidden">
         {/* Glitch Effect Container */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative w-full h-full">

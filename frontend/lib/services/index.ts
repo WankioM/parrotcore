@@ -1,5 +1,4 @@
-export * from './auth';
-export * from './voices';
-export * from './tts';
-export * from './covers';
-
+export { authService } from './auth';
+export { voicesService } from './voices';
+export { ttsService } from './tts';
+export { coversService } from './covers';
