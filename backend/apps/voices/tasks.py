@@ -68,7 +68,7 @@ def run_voice_enrollment(self, job_id: str):
             )
             
             if not result.success:
-                raise Exception(result.error or "Enrollment failed")
+                raise Exception(result.error_message or "Enrollment failed")
             
             job.progress_percent = 80
             job.save(update_fields=["progress_percent"])
