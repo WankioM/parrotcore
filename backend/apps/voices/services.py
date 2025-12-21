@@ -122,14 +122,18 @@ class VoiceProfileService:
         voice_profile.status = VoiceProfileStatus.ENROLLING
         voice_profile.save(update_fields=["status", "updated_at"])
         
-        # Queue Celery task
-        from .tasks import run_voice_enrollment
-        task = run_voice_enrollment.delay(str(job.id))
+        # Queue Celery task using explicit task name
+        from parrotcore.celery import app as celery_app
+        task = celery_app.send_task(
+            'apps.voices.tasks.run_voice_enrollment',
+            args=[str(job.id)]
+        )
         
         # Store task ID
         job.celery_task_id = task.id
-        job.save(update_fields=["celery_task_id"])
-        
+        job.status = EnrollmentJobStatus.QUEUED
+        job.save(update_fields=["celery_task_id", "status"])
+
         logger.info(f"Queued enrollment job {job.id} for profile {voice_profile.id}")
         return job
     

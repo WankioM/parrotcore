@@ -11,6 +11,12 @@ class VoiceProfileStatus(models.TextChoices):
     READY = "ready", "Ready"
     FAILED = "failed", "Failed"
 
+class EnrollmentJobStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    QUEUED = "queued", "Queued"  
+    PROCESSING = "processing", "Processing"
+    COMPLETED = "completed", "Completed"
+    FAILED = "failed", "Failed"
 
 class VoiceProfile(models.Model):
     """
@@ -94,12 +100,6 @@ class VoiceSample(models.Model):
         return f"{self.original_filename} ({self.duration_seconds:.1f}s)"
 
 
-class EnrollmentJobStatus(models.TextChoices):
-    """Status of an enrollment job."""
-    PENDING = "pending", "Pending"
-    PROCESSING = "processing", "Processing"
-    COMPLETED = "completed", "Completed"
-    FAILED = "failed", "Failed"
 
 
 class VoiceEnrollmentJob(models.Model):
