@@ -154,11 +154,6 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
-# Task routing (optional, for future scaling)
-CELERY_TASK_ROUTES = {
-    "apps.voices.tasks.*": {"queue": "voice"},
-    "apps.tts.tasks.*": {"queue": "tts"},
-}
 
 # Default queue
 CELERY_TASK_DEFAULT_QUEUE = "default"
