@@ -20,6 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --upgrade pip && \
     pip install -r backend/requirements.txt
+    
+# Install Chatterbox from working fork
+RUN pip install --no-cache-dir "chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master"
 
 # Copy application code
 COPY backend/ ./backend/
