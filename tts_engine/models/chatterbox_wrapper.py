@@ -3,6 +3,8 @@ import logging
 import pickle
 from pathlib import Path
 from typing import List, Optional
+import soundfile as sf  
+import tempfile
 
 import numpy as np
 
@@ -130,7 +132,6 @@ class ChatterboxWrapper(BaseTTSEngine):
                 success=False,
                 error_message=str(e),
             )
-    
     def synthesize(self, embedding_path: Path, text: str) -> AudioResult:
         """Generate speech using the voice embedding."""
         if not embedding_path.exists():
@@ -143,35 +144,39 @@ class ChatterboxWrapper(BaseTTSEngine):
             )
         
         try:
-            # Load embedding
             with open(embedding_path, "rb") as f:
                 embedding_data = pickle.load(f)
             
             reference_audio = embedding_data["reference_audio"]
             
-            # Generate speech
-            import torch
-            ref_tensor = torch.from_numpy(reference_audio).unsqueeze(0).to(self.device)
+            # Write reference audio to temp file (Chatterbox expects a file path)
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                tmp_path = tmp.name
             
-            wav = self.model.generate(
-                text=text,
-                audio_prompt=ref_tensor,
-            )
+            sf.write(tmp_path, reference_audio, self.sample_rate)
             
-            # Convert to numpy
-            if isinstance(wav, torch.Tensor):
-                audio = wav.squeeze().cpu().numpy()
-            else:
-                audio = np.array(wav)
-            
-            duration = len(audio) / self.sample_rate
-            
-            return AudioResult(
-                audio_array=audio,
-                sample_rate=self.sample_rate,
-                duration_seconds=duration,
-                success=True,
-            )
+            try:
+                wav = self.model.generate(
+                    text=text,
+                    audio_prompt_path=tmp_path,
+                )
+                
+                import torch
+                if isinstance(wav, torch.Tensor):
+                    audio = wav.squeeze().cpu().numpy()
+                else:
+                    audio = np.array(wav)
+                
+                duration = len(audio) / self.sample_rate
+                
+                return AudioResult(
+                    audio_array=audio,
+                    sample_rate=self.sample_rate,
+                    duration_seconds=duration,
+                    success=True,
+                )
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
             
         except Exception as e:
             logger.exception("Synthesis failed")

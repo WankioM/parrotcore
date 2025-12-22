@@ -115,14 +115,23 @@ export default function VoiceDetail() {
   const handleDeleteSample = async (sampleId: string) => {
     if (!profile) return;
 
+    // Confirm deletion
+    if (!window.confirm('Are you sure you want to delete this sample?')) {
+      return;
+    }
+
     try {
+      console.log(`🗑️ Deleting sample ${sampleId}...`);
       await voicesService.deleteVoiceSample(profile.id, sampleId);
       
+      console.log('✅ Sample deleted, refreshing profile...');
       const updated = await voicesService.getVoiceProfile(profile.id);
       setProfile(updated);
+      
+      console.log('✅ Profile updated!');
     } catch (err: any) {
-      console.error('Failed to delete sample:', err);
-      setError('Failed to delete sample');
+      console.error('❌ Failed to delete sample:', err);
+      setError(err.response?.data?.detail || 'Failed to delete sample');
     }
   };
 
@@ -577,7 +586,7 @@ export default function VoiceDetail() {
               Your voice has been successfully trained. Ready to create amazing content!
             </p>
             <div className={flex({ gap: 3, flexWrap: 'wrap' })}>
-                <Link 
+              <Link 
                 href="/tts/new"
                 className={css({ 
                   px: 5,
