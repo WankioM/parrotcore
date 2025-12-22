@@ -27,6 +27,7 @@ dependencies = [
     "torch>=2.0",
     "torchaudio>=2.0",
     "numpy>=1.24,<1.26",
+    "soundfile>=0.12",
     
     # TTS - Text to Speech
     "chatterbox-tts>=0.1.0",

@@ -32,22 +32,46 @@ def load_audio(path: Path, target_sr: Optional[int] = None) -> Tuple[np.ndarray,
     Returns:
         Tuple of (audio_array, sample_rate)
     """
+    try:
+        # Try librosa first (best MP3 support)
+        import librosa
+        waveform, sr = librosa.load(str(path), sr=target_sr, mono=True)
+        return waveform, sr
+    except ImportError:
+        # Fallback to torchaudio
+        torchaudio, torch = _get_torchaudio()
+        waveform, sr = torchaudio.load(str(path))
+        
+        # Convert to mono if stereo
+        if waveform.shape[0] > 1:
+            waveform = waveform.mean(dim=0, keepdim=True)
+        
+        # Resample if needed
+        if target_sr is not None and sr != target_sr:
+            resampler = torchaudio.transforms.Resample(sr, target_sr)
+            waveform = resampler(waveform)
+            sr = target_sr
+        
+        return waveform.squeeze(0).numpy(), sr
+
+
+def get_audio_duration(path: Path) -> float:
+    """Get duration of audio file in seconds."""
+    try:
+        import librosa
+        duration = librosa.get_duration(path=str(path))
+        return duration
+    except ImportError:
+        # Fallback to loading with torchaudio
+        torchaudio, torch = _get_torchaudio()
+        waveform, sample_rate = torchaudio.load(str(path))
+        return waveform.shape[1] / sample_rate
+    """Get duration of audio file in seconds."""
     torchaudio, torch = _get_torchaudio()
     
-    waveform, sr = torchaudio.load(str(path))
-    
-    # Convert to mono if stereo
-    if waveform.shape[0] > 1:
-        waveform = waveform.mean(dim=0, keepdim=True)
-    
-    # Resample if needed
-    if target_sr is not None and sr != target_sr:
-        resampler = torchaudio.transforms.Resample(sr, target_sr)
-        waveform = resampler(waveform)
-        sr = target_sr
-    
-    return waveform.squeeze(0).numpy(), sr
-
+    # Use soundfile backend for reliability
+    waveform, sample_rate = torchaudio.load(str(path), backend="soundfile")
+    return waveform.shape[1] / sample_rate
 
 def save_audio(path: Path, audio: np.ndarray, sample_rate: int) -> None:
     """Save audio array to file."""
@@ -120,12 +144,6 @@ def trim_silence(
     
     return audio[start:end]
 
-
-def get_audio_duration(path: Path) -> float:
-    """Get duration of audio file in seconds."""
-    torchaudio, _ = _get_torchaudio()
-    info = torchaudio.info(str(path))
-    return info.num_frames / info.sample_rate
 
 
 def concatenate_audio(

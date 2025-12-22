@@ -48,3 +48,6 @@ Thumbs.db
 *.pth
 embeddings/
 audio_output/
+## Panda
+styled-system
+styled-system-studio

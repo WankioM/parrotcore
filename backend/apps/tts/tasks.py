@@ -58,7 +58,7 @@ def run_tts_job(self, job_id: str):
             )
             
             if not result.success:
-                raise Exception(result.error or "Synthesis failed")
+                 raise Exception(result.error_message or "Synthesis failed")
             
             job.progress_percent = 80
             job.save(update_fields=["progress_percent"])

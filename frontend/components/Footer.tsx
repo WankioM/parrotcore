@@ -20,18 +20,23 @@ export const Footer: React.FC = () => {
         py: 12
       })}>
         <div className={grid({ 
-          columns: { base: 1, md: 3 }, 
+          columns: { base: 1, md: 4 }, 
           gap: 12 
         })}>
           {/* Brand Column */}
           <div>
-            <span className={css({ 
-              fontSize: 'xl', 
-              fontWeight: 'bold', 
-              color: 'gray.900' 
-            })}>
+            <Link 
+              href="/"
+              className={css({ 
+                fontSize: 'xl', 
+                fontWeight: 'bold', 
+                color: 'gray.900',
+                _hover: { color: 'cayenne' },
+                transition: 'colors'
+              })}
+            >
               Parrot Core
-            </span>
+            </Link>
             <p className={css({ 
               color: 'gray.600', 
               fontSize: 'sm', 
@@ -43,7 +48,7 @@ export const Footer: React.FC = () => {
             </p>
           </div>
 
-          {/* Links Column */}
+          {/* Studio Column */}
           <div>
             <h3 className={css({ 
               fontWeight: 'bold', 
@@ -92,22 +97,9 @@ export const Footer: React.FC = () => {
                   AI Song Covers
                 </Link>
               </li>
-            </ul>
-          </div>
-
-          {/* Info Column */}
-          <div>
-            <h3 className={css({ 
-              fontWeight: 'bold', 
-              color: 'gray.900', 
-              mb: 4 
-            })}>
-              About
-            </h3>
-            <ul className={css({ display: 'flex', flexDir: 'column', gap: 2 })}>
               <li>
                 <Link 
-                  href="/about" 
+                  href="/demo" 
                   className={css({
                     color: 'gray.600',
                     fontSize: 'sm',
@@ -115,12 +107,98 @@ export const Footer: React.FC = () => {
                     transition: 'colors'
                   })}
                 >
-                  Get to Know Us
+                  View Demos
                 </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Resources Column */}
+          <div>
+            <h3 className={css({ 
+              fontWeight: 'bold', 
+              color: 'gray.900', 
+              mb: 4 
+            })}>
+              Resources
+            </h3>
+            <ul className={css({ display: 'flex', flexDir: 'column', gap: 2 })}>
+              <li>
+                <a 
+                  href="https://github.com/your-repo/parrot-core" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={css({
+                    color: 'gray.600',
+                    fontSize: 'sm',
+                    _hover: { color: 'cayenne' },
+                    transition: 'colors'
+                  })}
+                >
+                  GitHub
+                </a>
               </li>
               <li>
                 <a 
-                  href="#" 
+                  href="https://docs.parrotcore.com" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={css({
+                    color: 'gray.600',
+                    fontSize: 'sm',
+                    _hover: { color: 'cayenne' },
+                    transition: 'colors'
+                  })}
+                >
+                  Documentation
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://discord.gg/parrotcore" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={css({
+                    color: 'gray.600',
+                    fontSize: 'sm',
+                    _hover: { color: 'cayenne' },
+                    transition: 'colors'
+                  })}
+                >
+                  Discord Community
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://twitter.com/parrotcore" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={css({
+                    color: 'gray.600',
+                    fontSize: 'sm',
+                    _hover: { color: 'cayenne' },
+                    transition: 'colors'
+                  })}
+                >
+                  Twitter
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Legal Column */}
+          <div>
+            <h3 className={css({ 
+              fontWeight: 'bold', 
+              color: 'gray.900', 
+              mb: 4 
+            })}>
+              Legal
+            </h3>
+            <ul className={css({ display: 'flex', flexDir: 'column', gap: 2 })}>
+              <li>
+                <Link 
+                  href="/privacy" 
                   className={css({
                     color: 'gray.600',
                     fontSize: 'sm',
@@ -129,11 +207,11 @@ export const Footer: React.FC = () => {
                   })}
                 >
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a 
-                  href="#" 
+                <Link 
+                  href="/terms" 
                   className={css({
                     color: 'gray.600',
                     fontSize: 'sm',
@@ -142,7 +220,33 @@ export const Footer: React.FC = () => {
                   })}
                 >
                   Terms of Service
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  href="/license" 
+                  className={css({
+                    color: 'gray.600',
+                    fontSize: 'sm',
+                    _hover: { color: 'cayenne' },
+                    transition: 'colors'
+                  })}
+                >
+                  Open Source License
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  href="/contact" 
+                  className={css({
+                    color: 'gray.600',
+                    fontSize: 'sm',
+                    _hover: { color: 'cayenne' },
+                    transition: 'colors'
+                  })}
+                >
+                  Contact Us
+                </Link>
               </li>
             </ul>
           </div>
@@ -166,7 +270,9 @@ export const Footer: React.FC = () => {
             </p>
             <div className={flex({ gap: 6 })}>
               <a 
-                href="#" 
+                href="https://github.com/your-repo/parrot-core" 
+                target="_blank"
+                rel="noopener noreferrer"
                 className={css({
                   color: 'gray.500',
                   fontSize: 'sm',
@@ -177,7 +283,9 @@ export const Footer: React.FC = () => {
                 GitHub
               </a>
               <a 
-                href="#" 
+                href="https://docs.parrotcore.com" 
+                target="_blank"
+                rel="noopener noreferrer"
                 className={css({
                   color: 'gray.500',
                   fontSize: 'sm',
@@ -188,7 +296,9 @@ export const Footer: React.FC = () => {
                 Documentation
               </a>
               <a 
-                href="#" 
+                href="https://discord.gg/parrotcore" 
+                target="_blank"
+                rel="noopener noreferrer"
                 className={css({
                   color: 'gray.500',
                   fontSize: 'sm',

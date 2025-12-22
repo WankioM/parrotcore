@@ -22,6 +22,7 @@ class StorageConfig:
     secret_key: Optional[str] = None
     region: Optional[str] = None
     use_ssl: bool = True
+    external_endpoint: Optional[str] = None
 
 
 class StorageBackend:
@@ -53,6 +54,7 @@ class StorageBackend:
                 access_key=os.environ.get("MINIO_ACCESS_KEY", "minioadmin"),
                 secret_key=os.environ.get("MINIO_SECRET_KEY", "minioadmin"),
                 use_ssl=False,  # MinIO dev uses HTTP
+                external_endpoint=os.environ.get("MINIO_EXTERNAL_ENDPOINT", "localhost:9000"),
             )
         else:
             return StorageConfig(
@@ -305,13 +307,19 @@ class StorageBackend:
             Presigned URL
         """
         url = self.client.generate_presigned_url(
-            ClientMethod=method,
-            Params={
-                "Bucket": self.config.bucket,
-                "Key": key,
-            },
-            ExpiresIn=expires,
-        )
+        ClientMethod=method,
+        Params={
+            "Bucket": self.config.bucket,
+            "Key": key,
+        },
+        ExpiresIn=expires,
+    )
+        if self.config.backend == "minio" and self.config.external_endpoint:
+            protocol = "https" if self.config.use_ssl else "http"
+            internal_url = f"{protocol}://{self.config.endpoint}"
+            external_url = f"{protocol}://{self.config.external_endpoint}"
+            url = url.replace(internal_url, external_url)
+        
         return url
     
     def get_presigned_upload_url(
