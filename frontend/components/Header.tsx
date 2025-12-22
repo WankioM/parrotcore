@@ -1,5 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
+import { css } from '@/styled-system/css';
+import { flex } from '@/styled-system/patterns';
 import { authService } from '@/lib/services/auth';
 
 export const Header: React.FC = () => {
@@ -14,39 +16,76 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200">
-      <nav className="editorial-section py-6">
-        <div className="flex items-center justify-between">
-          {/* Brand Text Only */}
-          <Link href="/" className="group">
-            <span className="text-gray-900 text-sm font-semibold transition-colors">
-              AI Voice Cloning & Text-to-Speech Studio
-            </span>
+    <header className={css({ 
+      bg: 'white', 
+      borderBottom: '1px solid',
+      borderColor: 'gray.200',
+      py: { base: 2, lg: 4 }
+    })}>
+      <div className={css({ 
+        maxW: '80rem',
+        mx: 'auto',
+        px: { base: 6, lg: 8 }
+      })}>
+        <div className={flex({ alignItems: 'center', justifyContent: 'space-between' })}>
+          {/* Brand Text */}
+          <Link href="/" className={css({
+            color: 'gray.900',
+            fontSize: 'sm',
+            fontWeight: 'semibold',
+            _hover: { color: 'cayenne' },
+            transition: 'colors'
+          })}>
+            AI Voice Cloning & Text-to-Speech Studio
           </Link>
 
           {/* Navigation Links */}
-          <div className="flex items-center gap-6">
+          <div className={flex({ alignItems: 'center', gap: 6 })}>
             <Link 
               href="/voices/new" 
-              className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
+              className={css({
+                color: 'gray.700',
+                fontSize: 'sm',
+                fontWeight: 'medium',
+                _hover: { color: 'cayenne' },
+                transition: 'colors'
+              })}
             >
               Voices
             </Link>
             <Link 
               href="/tts/new" 
-              className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
+              className={css({
+                color: 'gray.700',
+                fontSize: 'sm',
+                fontWeight: 'medium',
+                _hover: { color: 'cayenne' },
+                transition: 'colors'
+              })}
             >
               Text-to-Speech
             </Link>
             <Link 
               href="/covers/new" 
-              className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
+              className={css({
+                color: 'gray.700',
+                fontSize: 'sm',
+                fontWeight: 'medium',
+                _hover: { color: 'cayenne' },
+                transition: 'colors'
+              })}
             >
               Covers
             </Link>
             <Link 
               href="/about" 
-              className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
+              className={css({
+                color: 'gray.700',
+                fontSize: 'sm',
+                fontWeight: 'medium',
+                _hover: { color: 'cayenne' },
+                transition: 'colors'
+              })}
             >
               About
             </Link>
@@ -54,7 +93,13 @@ export const Header: React.FC = () => {
             {isAuthenticated ? (
               <button
                 onClick={handleLogout}
-                className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
+                className={css({
+                  color: 'gray.700',
+                  fontSize: 'sm',
+                  fontWeight: 'medium',
+                  _hover: { color: 'cayenne' },
+                  transition: 'colors'
+                })}
               >
                 Logout
               </button>
@@ -62,15 +107,31 @@ export const Header: React.FC = () => {
               <>
                 <Link 
                   href="/auth/signin" 
-                  className="text-gray-700 hover:text-cayenne transition-colors font-medium text-sm"
+                  className={css({
+                    color: 'gray.700',
+                    fontSize: 'sm',
+                    fontWeight: 'medium',
+                    _hover: { color: 'cayenne' },
+                    transition: 'colors'
+                  })}
                 >
                   Sign In
                 </Link>
                 <Link 
                   href="/auth/signup" 
-                  className="px-6 py-2 bg-cayenne text-white font-semibold rounded-lg text-sm
-                           hover:bg-cayenne transition-all shadow-sm"
-                  style={{ opacity: 0.95 }}
+                  className={css({
+                    px: 6,
+                    py: 2,
+                    bg: 'cayenne',
+                    color: 'white',
+                    fontWeight: 'semibold',
+                    rounded: 'lg',
+                    fontSize: 'sm',
+                    opacity: 0.95,
+                    _hover: { opacity: 0.9 },
+                    transition: 'all',
+                    shadow: 'sm'
+                  })}
                 >
                   Sign Up
                 </Link>
@@ -78,7 +139,7 @@ export const Header: React.FC = () => {
             )}
           </div>
         </div>
-      </nav>
+      </div>
     </header>
   );
-};
+}

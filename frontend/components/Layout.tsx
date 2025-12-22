@@ -1,4 +1,5 @@
 import React from 'react';
+import { css } from '@/styled-system/css';
 import { Header } from './Header';
 import { Footer } from './Footer';
 
@@ -8,12 +9,16 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen flex flex-col">
-      {<Header /> }
-      <main className="flex-1">
+    <div className={css({ 
+      minH: 'screen', 
+      display: 'flex', 
+      flexDir: 'column' 
+    })}>
+      <Header />
+      <main className={css({ flex: 1 })}>
         {children}
       </main>
-      {<Footer /> }
+      <Footer />
     </div>
   );
 };

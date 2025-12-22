@@ -85,8 +85,8 @@ export interface TTSJob {
 }
 
 export interface CreateTTSJobRequest {
-  voice_profile_id: string;
-  input_text: string;
+  voice_profile_id: string;  
+  text: string;             
 }
 
 // ============================================================================
