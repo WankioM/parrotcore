@@ -9,11 +9,18 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    git \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./
 RUN pip install --upgrade pip && pip install .
+
+# Install Chatterbox from working fork
+RUN pip install --no-cache-dir "chatterbox-tts @ git+https://github.com/devnen/chatterbox-v2.git@master"
+
+# Add to PYTHONPATH
+ENV PYTHONPATH=/app:/app/backend:/app/tts_engine:$PYTHONPATH
 
 COPY backend/ ./backend/
 COPY tts_engine/ ./tts_engine/
