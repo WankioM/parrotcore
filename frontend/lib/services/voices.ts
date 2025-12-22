@@ -48,6 +48,7 @@ export const voicesService = {
   // Get single voice profile with samples and enrollment status
   async getVoiceProfile(id: string): Promise<VoiceProfile> {
     const response = await apiClient.get(`/voices/${id}/`);
+    console.log('🔍 Voice Profile Response:', response.data);
     return response.data;
   },
 

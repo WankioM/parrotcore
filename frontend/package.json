@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "panda codegen && next dev",
+    "build": "panda codegen && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -16,6 +16,9 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@pandacss/dev": "^0.45.2",
+    "@stylexjs/nextjs-plugin": "^0.11.1",
+    "@stylexjs/stylex": "^0.17.3",
     "@types/node": "^20.10.5",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",

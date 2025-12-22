@@ -1,5 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
+import { css, cva } from '@/styled-system/css';
+import { flex } from '@/styled-system/patterns';
 
 interface StudioCardProps {
   href: string;
@@ -8,6 +10,31 @@ interface StudioCardProps {
   description: string;
   variant?: 'default' | 'featured';
 }
+
+const cardStyles = cva({
+  base: {
+    bg: 'white',
+    border: '2px solid',
+    borderColor: 'gray.200',
+    rounded: 'xl',
+    p: 8,
+    transition: 'all 0.3s',
+    shadow: 'sm',
+    _hover: {
+      transform: 'scale(1.02)',
+      borderColor: 'cayenne',
+      shadow: 'xl'
+    }
+  },
+  variants: {
+    variant: {
+      default: {},
+      featured: {
+        gridColumn: { base: 'span 1', lg: 'span 2' }
+      }
+    }
+  }
+});
 
 export const StudioCard: React.FC<StudioCardProps> = ({ 
   href, 
@@ -19,20 +46,31 @@ export const StudioCard: React.FC<StudioCardProps> = ({
   return (
     <Link 
       href={href} 
-      className={`
-        studio-card group
-        ${variant === 'featured' ? 'col-span-full lg:col-span-2' : ''}
-      `}
+      className={cardStyles({ variant })}
     >
-      <div className="flex items-start gap-4">
-        <span className="text-5xl group-hover:scale-110 transition-transform duration-300">
+      <div className={flex({ alignItems: 'flex-start', gap: 4 })}>
+        <span className={css({ 
+          fontSize: '5xl',
+          transition: 'transform 0.3s',
+          _groupHover: { transform: 'scale(1.1)' }
+        })}>
           {icon}
         </span>
-        <div className="flex-1">
-          <h2 className="studio-heading text-3xl mb-3">
+        <div className={css({ flex: 1 })}>
+          <h2 className={css({ 
+            fontSize: '3xl',
+            fontWeight: 800,
+            color: 'cayenne',
+            letterSpacing: '-0.025em',
+            mb: 3
+          })}>
             {title}
           </h2>
-          <p className="text-white/70 text-lg leading-relaxed">
+          <p className={css({ 
+            color: 'gray.600',
+            fontSize: 'lg',
+            lineHeight: 'relaxed'
+          })}>
             {description}
           </p>
         </div>

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { css } from '@/styled-system/css';
+import { flex } from '@/styled-system/patterns';
 import { authService } from '@/lib/services/auth';
 
 export default function Signup() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    username: '',       
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -18,13 +20,11 @@ export default function Signup() {
     e.preventDefault();
     setError(null);
 
-    // ✅ Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    // ✅ Validate password length
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters');
       return;
@@ -39,7 +39,6 @@ export default function Signup() {
         password: formData.password,
       });
 
-      // ✅ Redirect on success
       router.push('/');
     } catch (err: any) {
       console.error('Signup failed:', err.response?.data);
@@ -54,43 +53,86 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className={css({ minH: 'screen', display: 'flex' })}>
       {/* Left Panel - Form */}
-     {/* Left Panel - Form */}
-      <div className="w-full lg:w-1/2 bg-coffee flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
+      <div className={flex({ 
+        w: { base: 'full', lg: '1/2' },
+        bg: 'coffee',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 8
+      })}>
+        <div className={css({ w: 'full', maxW: 'md' })}>
           {/* Logo/Back */}
-          <Link href="/" className="inline-flex items-center gap-2 mb-12 group">
-            <div className="w-10 h-10 rounded-full bg-cayenne flex items-center justify-center">
-              <span className="text-2xl">🦜</span>
+          <Link href="/" className={flex({ 
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 2,
+            mb: 12
+          })}>
+            <div className={flex({ 
+              w: 10,
+              h: 10,
+              rounded: 'full',
+              bg: 'cayenne',
+              alignItems: 'center',
+              justifyContent: 'center'
+            })}>
+              <span className={css({ fontSize: '2xl' })}>🦜</span>
             </div>
-            <span className="studio-heading text-2xl group-hover:text-cayenne/80 transition-colors">
+            <span className={css({ 
+              fontSize: '2xl',
+              fontWeight: 800,
+              color: 'cayenne',
+              letterSpacing: '-0.025em',
+              _groupHover: { opacity: 0.8 },
+              transition: 'colors'
+            })}>
               Parrot Core
             </span>
           </Link>
 
           {/* Heading */}
-          <div className="mb-10">
-            <h1 className="text-5xl font-extrabold text-white mb-3 leading-tight">
+          <div className={css({ mb: 10 })}>
+            <h1 className={css({ 
+              fontSize: '5xl',
+              fontWeight: 'extrabold',
+              color: 'white',
+              mb: 3,
+              lineHeight: 'tight'
+            })}>
               Create your account
             </h1>
-            <p className="text-white/60 text-lg">
+            <p className={css({ color: 'white/60', fontSize: 'lg' })}>
               Start cloning voices and creating AI covers
             </p>
           </div>
 
-          {/* ✅ Error Display */}
+          {/* Error Display */}
           {error && (
-            <div className="bg-red-500/10 border-l-4 border-red-500 p-4 mb-6">
-              <p className="text-red-400 text-sm font-medium">{error}</p>
+            <div className={css({ 
+              bg: 'red.500/10',
+              borderLeft: '4px solid',
+              borderColor: 'red.500',
+              p: 4,
+              mb: 6
+            })}>
+              <p className={css({ color: 'red.400', fontSize: 'sm', fontWeight: 'medium' })}>
+                {error}
+              </p>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* ✅ Username Input - ADD THIS */}
+          <form onSubmit={handleSubmit} className={css({ display: 'flex', flexDir: 'column', gap: 6 })}>
+            {/* Username Input */}
             <div>
-              <label htmlFor="username" className="block text-white/80 font-medium mb-2">
+              <label htmlFor="username" className={css({ 
+                display: 'block',
+                color: 'white/80',
+                fontWeight: 'medium',
+                mb: 2
+              })}>
                 Username
               </label>
               <input
@@ -98,9 +140,19 @@ export default function Signup() {
                 id="username"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full px-4 py-3 bg-twilight/50 border-2 border-white/10 
-                         rounded-lg text-white placeholder-white/40
-                         focus:border-cayenne focus:outline-none transition-colors"
+                className={css({
+                  w: 'full',
+                  px: 4,
+                  py: 3,
+                  bg: 'twilight/50',
+                  border: '2px solid',
+                  borderColor: 'white/10',
+                  rounded: 'lg',
+                  color: 'white',
+                  _placeholder: { color: 'white/40' },
+                  _focus: { borderColor: 'cayenne', outline: 'none' },
+                  transition: 'colors'
+                })}
                 placeholder="johndoe"
                 required
                 disabled={isLoading}
@@ -109,7 +161,12 @@ export default function Signup() {
 
             {/* Email Input */}
             <div>
-              <label htmlFor="email" className="block text-white/80 font-medium mb-2">
+              <label htmlFor="email" className={css({ 
+                display: 'block',
+                color: 'white/80',
+                fontWeight: 'medium',
+                mb: 2
+              })}>
                 Email address
               </label>
               <input
@@ -117,9 +174,19 @@ export default function Signup() {
                 id="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 bg-twilight/50 border-2 border-white/10 
-                         rounded-lg text-white placeholder-white/40
-                         focus:border-cayenne focus:outline-none transition-colors"
+                className={css({
+                  w: 'full',
+                  px: 4,
+                  py: 3,
+                  bg: 'twilight/50',
+                  border: '2px solid',
+                  borderColor: 'white/10',
+                  rounded: 'lg',
+                  color: 'white',
+                  _placeholder: { color: 'white/40' },
+                  _focus: { borderColor: 'cayenne', outline: 'none' },
+                  transition: 'colors'
+                })}
                 placeholder="your@email.com"
                 required
                 disabled={isLoading}
@@ -128,7 +195,12 @@ export default function Signup() {
 
             {/* Password Input */}
             <div>
-              <label htmlFor="password" className="block text-white/80 font-medium mb-2">
+              <label htmlFor="password" className={css({ 
+                display: 'block',
+                color: 'white/80',
+                fontWeight: 'medium',
+                mb: 2
+              })}>
                 Password
               </label>
               <input
@@ -136,9 +208,19 @@ export default function Signup() {
                 id="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 bg-twilight/50 border-2 border-white/10 
-                         rounded-lg text-white placeholder-white/40
-                         focus:border-cayenne focus:outline-none transition-colors"
+                className={css({
+                  w: 'full',
+                  px: 4,
+                  py: 3,
+                  bg: 'twilight/50',
+                  border: '2px solid',
+                  borderColor: 'white/10',
+                  rounded: 'lg',
+                  color: 'white',
+                  _placeholder: { color: 'white/40' },
+                  _focus: { borderColor: 'cayenne', outline: 'none' },
+                  transition: 'colors'
+                })}
                 placeholder="••••••••"
                 required
                 minLength={8}
@@ -148,7 +230,12 @@ export default function Signup() {
 
             {/* Confirm Password Input */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-white/80 font-medium mb-2">
+              <label htmlFor="confirmPassword" className={css({ 
+                display: 'block',
+                color: 'white/80',
+                fontWeight: 'medium',
+                mb: 2
+              })}>
                 Confirm Password
               </label>
               <input
@@ -156,9 +243,19 @@ export default function Signup() {
                 id="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="w-full px-4 py-3 bg-twilight/50 border-2 border-white/10 
-                         rounded-lg text-white placeholder-white/40
-                         focus:border-cayenne focus:outline-none transition-colors"
+                className={css({
+                  w: 'full',
+                  px: 4,
+                  py: 3,
+                  bg: 'twilight/50',
+                  border: '2px solid',
+                  borderColor: 'white/10',
+                  rounded: 'lg',
+                  color: 'white',
+                  _placeholder: { color: 'white/40' },
+                  _focus: { borderColor: 'cayenne', outline: 'none' },
+                  transition: 'colors'
+                })}
                 placeholder="••••••••"
                 required
                 disabled={isLoading}
@@ -166,38 +263,67 @@ export default function Signup() {
             </div>
 
             {/* Terms */}
-            <div className="flex items-start gap-3">
+            <div className={flex({ alignItems: 'flex-start', gap: 3 })}>
               <input
                 type="checkbox"
                 id="terms"
-                className="mt-1 w-4 h-4 accent-cayenne"
+                className={css({ mt: 1, w: 4, h: 4, accentColor: 'cayenne' })}
                 required
                 disabled={isLoading}
               />
-              <label htmlFor="terms" className="text-white/60 text-sm">
+              <label htmlFor="terms" className={css({ color: 'white/60', fontSize: 'sm' })}>
                 I agree to the{' '}
-                <Link href="#" className="text-cayenne hover:underline">
+                <Link href="#" className={css({ 
+                  color: 'cayenne',
+                  _hover: { textDecoration: 'underline' }
+                })}>
                   Terms of Service
                 </Link>{' '}
                 and{' '}
-                <Link href="#" className="text-cayenne hover:underline">
+                <Link href="#" className={css({ 
+                  color: 'cayenne',
+                  _hover: { textDecoration: 'underline' }
+                })}>
                   Privacy Policy
                 </Link>
               </label>
             </div>
 
-            {/* ✅ Submit Button with Loading State */}
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-4 bg-cayenne text-white font-bold text-lg rounded-lg
-                       hover:bg-cayenne/90 transition-all shadow-lg shadow-cayenne/30
-                       active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
-                       flex items-center justify-center gap-3"
+              className={css({
+                w: 'full',
+                py: 4,
+                bg: 'cayenne',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: 'lg',
+                rounded: 'lg',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 3,
+                shadow: 'lg',
+                shadowColor: 'cayenne/30',
+                _hover: { opacity: 0.9 },
+                _active: { transform: 'scale(0.98)' },
+                _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+                transition: 'all'
+              })}
             >
               {isLoading ? (
                 <>
-                  <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
+                  <div className={css({ 
+                    animation: 'spin',
+                    w: 5,
+                    h: 5,
+                    border: '2px solid',
+                    borderColor: 'white/30',
+                    borderTopColor: 'white',
+                    rounded: 'full'
+                  })} />
                   Creating Account...
                 </>
               ) : (
@@ -207,10 +333,14 @@ export default function Signup() {
           </form>
 
           {/* Sign In Link */}
-          <div className="mt-8 text-center">
-            <p className="text-white/60">
+          <div className={css({ mt: 8, textAlign: 'center' })}>
+            <p className={css({ color: 'white/60' })}>
               Already have an account?{' '}
-              <Link href="/auth/signin" className="text-cayenne font-semibold hover:underline">
+              <Link href="/auth/signin" className={css({ 
+                color: 'cayenne',
+                fontWeight: 'semibold',
+                _hover: { textDecoration: 'underline' }
+              })}>
                 Sign In
               </Link>
             </p>
@@ -219,56 +349,69 @@ export default function Signup() {
       </div>
 
       {/* Right Panel - Visual */}
-      <div className="hidden lg:block lg:w-1/2 relative bg-linear-to-br from-twilight to-coffee overflow-hidden">
-        {/* Glitch Effect Container */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative w-full h-full">
-            {/* Main Image Layer */}
-            <div className="glitch-container">
-              <div className="glitch-layer glitch-layer-1">
-                <div className="glitch-content">
-                  <div className="text-9xl">🎤</div>
-                </div>
-              </div>
-              <div className="glitch-layer glitch-layer-2">
-                <div className="glitch-content">
-                  <div className="text-9xl">🎤</div>
-                </div>
-              </div>
-              <div className="glitch-layer glitch-layer-3">
-                <div className="glitch-content">
-                  <div className="text-9xl">🎤</div>
-                </div>
-              </div>
+      <div className={css({
+        display: { base: 'none', lg: 'block' },
+        w: { lg: '1/2' },
+        position: 'relative',
+        background: 'linear-gradient(to bottom right, token(colors.twilight), token(colors.coffee))',
+        overflow: 'hidden'
+      })}>
+        <div className={flex({ 
+          position: 'absolute',
+          inset: 0,
+          alignItems: 'center',
+          justifyContent: 'center'
+        })}>
+          <div className={css({ 
+            position: 'relative',
+            w: 'full',
+            h: 'full',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          })}>
+            <div className={css({ textAlign: 'center' })}>
+              <h2 className={css({ 
+                fontSize: '6xl',
+                fontWeight: 'extrabold',
+                color: 'white',
+                mb: 6,
+                lineHeight: 'tight',
+                filter: 'drop-shadow(0 25px 25px rgb(0 0 0 / 0.15))'
+              })}>
+                Your Voice.<br/>
+                Amplified.
+              </h2>
+              <p className={css({ 
+                color: 'white/80',
+                fontSize: 'xl',
+                maxW: 'md',
+                mx: 'auto',
+                px: 6
+              })}>
+                Join thousands creating AI voices, covers, and content with cutting-edge technology
+              </p>
             </div>
-
-            {/* Overlay Text */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <h2 className="text-6xl font-extrabold text-white mb-6 leading-tight drop-shadow-2xl">
-                  Your Voice.<br/>
-                  Amplified.
-                </h2>
-                <p className="text-white/80 text-xl max-w-md mx-auto px-6">
-                  Join thousands creating AI voices, covers, and content with cutting-edge technology
-                </p>
-              </div>
-            </div>
-
-            {/* Scan Lines Effect */}
-            <div className="scan-lines"></div>
           </div>
         </div>
 
         {/* Bottom Dots */}
-        <div className="absolute bottom-8 right-8 flex gap-2">
+        <div className={flex({ 
+          position: 'absolute',
+          bottom: 8,
+          right: 8,
+          gap: 2
+        })}>
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className={`w-2 h-2 rounded-full ${
-                i === 0 ? 'bg-cayenne' : 'bg-white/30'
-              }`}
-            ></div>
+              className={css({
+                w: 2,
+                h: 2,
+                rounded: 'full',
+                bg: i === 0 ? 'cayenne' : 'white/30'
+              })}
+            />
           ))}
         </div>
       </div>

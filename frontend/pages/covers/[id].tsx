@@ -3,14 +3,14 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { css } from '@/styled-system/css';
 import { flex } from '@/styled-system/patterns';
-import { ttsService } from '@/lib/services/tts';
-import { TTSJob } from '@/lib/types/api';
+import { coversService } from '@/lib/services/covers';
+import { CoverJob } from '@/lib/types/api';
 
-export default function TTSJobStatus() {
+export default function CoverJobStatus() {
   const router = useRouter();
   const { id } = router.query;
   
-  const [job, setJob] = useState<TTSJob | null>(null);
+  const [job, setJob] = useState<CoverJob | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -22,12 +22,12 @@ export default function TTSJobStatus() {
     const loadJob = async () => {
       try {
         setIsLoading(true);
-        const data = await ttsService.getTTSJob(id);
+        const data = await coversService.getCoverJob(id);
         setJob(data);
         setIsLoading(false);
       } catch (err: any) {
-        console.error('Failed to load TTS job:', err);
-        setError('Failed to load TTS job');
+        console.error('Failed to load cover job:', err);
+        setError('Failed to load cover job');
         setIsLoading(false);
       }
     };
@@ -41,7 +41,7 @@ export default function TTSJobStatus() {
 
     const interval = setInterval(async () => {
       try {
-        const updated = await ttsService.getTTSJob(job.id);
+        const updated = await coversService.getCoverJob(job.id);
         setJob(updated);
         
         if (updated.status === 'completed' || updated.status === 'failed') {
@@ -50,7 +50,7 @@ export default function TTSJobStatus() {
       } catch (err) {
         console.error('Failed to poll job status:', err);
       }
-    }, 2000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [job?.status, job?.id]);
@@ -85,13 +85,13 @@ export default function TTSJobStatus() {
         gap: 4
       })}>
         <p className={css({ color: 'gray.600' })}>
-          {error || 'TTS job not found'}
+          {error || 'Cover job not found'}
         </p>
-        <Link href="/tts/new" className={css({ 
+        <Link href="/covers/new" className={css({ 
           color: 'cayenne',
           _hover: { textDecoration: 'underline' }
         })}>
-          ← Create New TTS
+          ← Create New Cover
         </Link>
       </div>
     );
@@ -105,7 +105,7 @@ export default function TTSJobStatus() {
         px: { base: 4, lg: 6 }
       })}>
         {/* Back Link */}
-        <Link href="/tts/new" className={css({ 
+        <Link href="/covers/new" className={css({ 
           display: 'inline-block',
           color: 'gray.600',
           mb: 8,
@@ -113,7 +113,7 @@ export default function TTSJobStatus() {
           _hover: { color: 'cayenne' },
           transition: 'colors'
         })}>
-          ← Create New TTS
+          ← Create New Cover
         </Link>
 
         {/* Header */}
@@ -124,9 +124,9 @@ export default function TTSJobStatus() {
             color: 'gray.900',
             mb: 4
           })}>
-            🎤 Text-to-Speech Job
+            🎵 AI Cover Job
           </h1>
-          <div className={flex({ alignItems: 'center', gap: 3 })}>
+          <div className={flex({ alignItems: 'center', gap: 3, flexWrap: 'wrap' })}>
             <span className={css({
               px: 3,
               py: 1,
@@ -145,10 +145,15 @@ export default function TTSJobStatus() {
                job.status === 'failed' ? '✗ Failed' :
                '⏳ Queued'}
             </span>
+            {job.original_filename && (
+              <span className={css({ fontSize: 'sm', color: 'gray.600' })}>
+                {job.original_filename}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Processing Status */}
+        {/* Processing Status with Steps */}
         {(job.status === 'pending' || job.status === 'queued' || job.status === 'processing') && (
           <div className={css({ 
             bg: 'blue.50',
@@ -159,7 +164,7 @@ export default function TTSJobStatus() {
             borderColor: 'blue.300',
             mb: 8
           })}>
-            <div className={flex({ alignItems: 'center', gap: 3, mb: 3 })}>
+            <div className={flex({ alignItems: 'center', gap: 3, mb: 4 })}>
               <div className={css({ 
                 animation: 'spin',
                 w: 6,
@@ -174,11 +179,73 @@ export default function TTSJobStatus() {
                 fontWeight: 'bold',
                 color: 'blue.900'
               })}>
-                {job.status === 'processing' ? 'Generating speech...' : 'Job queued...'}
+                {coversService.getStepDescription(job.current_step)}
               </p>
             </div>
-            <p className={css({ fontSize: 'sm', color: 'blue.700' })}>
-              ⏱️ This usually takes 10-30 seconds. The page will update automatically.
+
+            {/* Progress Bar */}
+            <div className={css({ mb: 3 })}>
+              <div className={flex({ 
+                justifyContent: 'space-between',
+                fontSize: 'sm',
+                color: 'blue.800',
+                mb: 2,
+                fontWeight: 'medium'
+              })}>
+                <span>Progress</span>
+                <span className={css({ fontWeight: 'bold' })}>
+                  {job.progress_percent}%
+                </span>
+              </div>
+              <div className={css({ 
+                w: 'full',
+                bg: 'blue.100',
+                rounded: 'full',
+                h: 4,
+                overflow: 'hidden'
+              })}>
+                <div 
+                  className={css({ 
+                    bg: 'blue.500',
+                    h: 'full',
+                    transition: 'all 0.5s'
+                  })}
+                  style={{ width: `${job.progress_percent}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Step Indicators */}
+            <div className={css({ mt: 4 })}>
+              <div className={flex({ gap: 2, flexWrap: 'wrap' })}>
+                {(['downloading', 'separating', 'converting', 'mixing', 'complete'] as const).map((step) => {
+                  const isComplete = job.current_step === 'complete' || 
+                    (['downloading', 'separating', 'converting', 'mixing'].indexOf(step) < 
+                     ['downloading', 'separating', 'converting', 'mixing'].indexOf(job.current_step));
+                  const isCurrent = job.current_step === step;
+                  
+                  return (
+                    <span
+                      key={step}
+                      className={css({
+                        px: 2,
+                        py: 1,
+                        rounded: 'md',
+                        fontSize: 'xs',
+                        fontWeight: 'medium',
+                        bg: isComplete ? 'green.200' : isCurrent ? 'blue.200' : 'gray.200',
+                        color: isComplete ? 'green.900' : isCurrent ? 'blue.900' : 'gray.600'
+                      })}
+                    >
+                      {isComplete ? '✓' : isCurrent ? '▶' : '○'} {step}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            <p className={css({ fontSize: 'sm', color: 'blue.700', mt: 4 })}>
+              ⏱️ This usually takes 2-5 minutes. The page will update automatically.
             </p>
           </div>
         )}
@@ -200,13 +267,13 @@ export default function TTSJobStatus() {
               mb: 2,
               fontSize: 'lg'
             })}>
-              ✗ Generation Failed
+              ✗ Cover Generation Failed
             </h3>
             <p className={css({ color: 'red.800', mb: 4 })}>
               {job.error_message || 'Something went wrong. Please try again.'}
             </p>
             <Link
-              href="/tts/new"
+              href="/covers/new"
               className={css({ 
                 display: 'inline-block',
                 px: 5,
@@ -225,7 +292,7 @@ export default function TTSJobStatus() {
           </div>
         )}
 
-        {/* Input Text Card */}
+        {/* Song Info Card */}
         <div className={css({ 
           bg: 'white',
           border: '2px solid',
@@ -240,15 +307,27 @@ export default function TTSJobStatus() {
             color: 'gray.900',
             mb: 4
           })}>
-            📝 Input Text
+            📝 Cover Settings
           </h2>
-          <p className={css({ 
-            color: 'gray.700',
-            lineHeight: '1.7',
-            whiteSpace: 'pre-wrap'
+          <div className={css({ 
+            display: 'grid',
+            gap: 3,
+            fontSize: 'sm',
+            color: 'gray.700'
           })}>
-            {job.input_text}
-          </p>
+            <div className={flex({ justifyContent: 'space-between' })}>
+              <span className={css({ fontWeight: 'medium' })}>Voice Profile:</span>
+              <span>{job.voice_profile_name}</span>
+            </div>
+            <div className={flex({ justifyContent: 'space-between' })}>
+              <span className={css({ fontWeight: 'medium' })}>Pitch Shift:</span>
+              <span>{job.pitch_shift > 0 ? '+' : ''}{job.pitch_shift} semitones</span>
+            </div>
+            <div className={flex({ justifyContent: 'space-between' })}>
+              <span className={css({ fontWeight: 'medium' })}>Original Song:</span>
+              <span>{job.original_filename}</span>
+            </div>
+          </div>
         </div>
 
         {/* Audio Player - Only show when completed */}
@@ -270,7 +349,7 @@ export default function TTSJobStatus() {
               gap: 2
             })}>
               <span>🎵</span>
-              <span>Generated Speech</span>
+              <span>Your AI Cover</span>
             </h2>
             
             {/* Audio Player */}
@@ -290,7 +369,7 @@ export default function TTSJobStatus() {
             {/* Download Button */}
             <a
               href={job.audio.download_url}
-              download={`tts-${job.id}.mp3`}
+              download={`cover-${job.id}.mp3`}
               className={css({ 
                 display: 'inline-block',
                 px: 5,
@@ -304,7 +383,7 @@ export default function TTSJobStatus() {
                 transition: 'all'
               })}
             >
-              ⬇️ Download Audio
+              ⬇️ Download Cover
             </a>
           </div>
         )}
@@ -342,6 +421,12 @@ export default function TTSJobStatus() {
               <span className={css({ fontWeight: 'medium' })}>Created:</span>
               <span>{new Date(job.created_at).toLocaleString()}</span>
             </div>
+            {job.started_at && (
+              <div className={flex({ justifyContent: 'space-between' })}>
+                <span className={css({ fontWeight: 'medium' })}>Started:</span>
+                <span>{new Date(job.started_at).toLocaleString()}</span>
+              </div>
+            )}
             {job.completed_at && (
               <div className={flex({ justifyContent: 'space-between' })}>
                 <span className={css({ fontWeight: 'medium' })}>Completed:</span>

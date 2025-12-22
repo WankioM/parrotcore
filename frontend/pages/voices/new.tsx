@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { css } from '@/styled-system/css';
+import { flex } from '@/styled-system/patterns';
 import { voicesService } from '@/lib/services/voices';
 
 export default function NewVoice() {
@@ -16,13 +18,10 @@ export default function NewVoice() {
     setIsCreating(true);
 
     try {
-      // Create voice profile via API
       const profile = await voicesService.createVoiceProfile({
         name: voiceName,
         description: description || undefined,
       });
-
-      // Navigate to the voice detail page
       router.push(`/voices/${profile.id}`);
     } catch (err: any) {
       console.error('Error creating voice profile:', err);
@@ -32,121 +31,209 @@ export default function NewVoice() {
   };
 
   return (
-    <div className="min-h-screen bg-white py-12">
-      <div className="editorial-section">
-        {/* Header */}
-        <div className="mb-12">
-          <Link href="/" className="text-gray-600 hover:text-cayenne transition-colors mb-6 inline-block">
+    <div className={css({ minH: 'screen', display: 'flex' })}>
+   
+      <div className={flex({ 
+        w: { base: 'full', lg: '1/2' },
+        bg: 'white',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: { base: 8, lg: 12 }
+      })}>
+        <div className={css({ w: 'full', maxW: '560px' })}>
+          <Link href="/" className={css({ 
+            display: 'inline-block',
+            color: 'gray.600',
+            fontSize: 'sm',
+            mb: 12,
+            _hover: { color: 'cayenne' },
+            transition: 'colors'
+          })}>
             ← Back
           </Link>
-          
-          <h1 className="text-6xl font-extrabold text-gray-900 mb-4 leading-tight">
-            Create Voice Profile
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl">
-            Upload voice samples to create your unique AI voice clone
-          </p>
-        </div>
 
-        {/* Main Content */}
-        <div className="max-w-3xl">
-          {/* Error Message */}
+          <div className={css({ mb: 10 })}>
+            <h1 className={css({ 
+              fontSize: '5xl',
+              fontWeight: 'extrabold',
+              color: 'gray.900',
+              lineHeight: 'tight',
+              mb: 4
+            })}>
+              Create Voice Profile
+            </h1>
+            <p className={css({ fontSize: 'lg', color: 'gray.600' })}>
+              Upload voice samples to create your unique AI voice clone
+            </p>
+          </div>
+
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-              <p className="text-red-800 text-sm">{error}</p>
+            <div className={css({ 
+              bg: 'red.50',
+              borderLeft: '4px solid',
+              borderColor: 'red.500',
+              p: 4,
+              mb: 6,
+              rounded: 'md'
+            })}>
+              <div className={flex({ alignItems: 'flex-start', gap: 3 })}>
+                <span className={css({ color: 'red.500', fontSize: 'xl' })}>⚠️</span>
+                <p className={css({ color: 'red.800', fontSize: 'sm', fontWeight: 'medium' })}>
+                  {error}
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Step 1: Basic Info */}
-          <div className="bg-white border-2 border-gray-200 rounded-xl p-8 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              📝 Voice Profile Details
-            </h2>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Voice Name */}
-              <div>
-                <label htmlFor="voiceName" className="block text-gray-700 font-semibold mb-2">
-                  Voice Name *
-                </label>
-                <input
-                  type="text"
-                  id="voiceName"
-                  value={voiceName}
-                  onChange={(e) => setVoiceName(e.target.value)}
-                  placeholder="e.g., My Professional Voice"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg
-                           focus:border-cayenne focus:outline-none transition-colors
-                           text-gray-900"
-                  required
-                  disabled={isCreating}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label htmlFor="description" className="block text-gray-700 font-semibold mb-2">
-                  Description (Optional)
-                </label>
-                <textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe this voice profile..."
-                  rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg
-                           focus:border-cayenne focus:outline-none transition-colors
-                           text-gray-900 resize-none"
-                  disabled={isCreating}
-                />
-              </div>
-
-              <button
-                type="submit"
+          <form onSubmit={handleSubmit} className={css({ display: 'flex', flexDir: 'column', gap: 6 })}>
+            <div>
+              <label htmlFor="voiceName" className={css({ 
+                display: 'block',
+                fontSize: 'sm',
+                fontWeight: 'semibold',
+                color: 'gray.900',
+                mb: 2
+              })}>
+                Voice Name *
+              </label>
+              <input
+                type="text"
+                id="voiceName"
+                value={voiceName}
+                onChange={(e) => setVoiceName(e.target.value)}
+                placeholder="e.g., My Professional Voice"
+                className={css({
+                  w: 'full',
+                  px: 4,
+                  py: 3,
+                  border: '2px solid',
+                  borderColor: 'gray.200',
+                  rounded: 'lg',
+                  fontSize: 'base',
+                  color: 'gray.900',
+                  _focus: { borderColor: 'cayenne', outline: 'none' },
+                  transition: 'colors'
+                })}
+                required
                 disabled={isCreating}
-                className="w-full py-4 bg-cayenne text-white font-bold text-lg rounded-lg
-                         hover:bg-cayenne transition-all shadow-lg disabled:opacity-50
-                         disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                style={{ opacity: isCreating ? 0.5 : 0.95 }}
-              >
-                {isCreating ? (
-                  <>
-                    <div className="animate-spin w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
-                    Creating Profile...
-                  </>
-                ) : (
-                  'Create Profile & Upload Samples'
-                )}
-              </button>
-            </form>
-          </div>
+              />
+            </div>
 
-          {/* Info Card */}
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <div>
+              <label htmlFor="description" className={css({ 
+                display: 'block',
+                fontSize: 'sm',
+                fontWeight: 'semibold',
+                color: 'gray.900',
+                mb: 2
+              })}>
+                Description (Optional)
+              </label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe this voice profile..."
+                rows={4}
+                className={css({
+                  w: 'full',
+                  px: 4,
+                  py: 3,
+                  border: '2px solid',
+                  borderColor: 'gray.200',
+                  rounded: 'lg',
+                  fontSize: 'base',
+                  color: 'gray.900',
+                  resize: 'none',
+                  _focus: { borderColor: 'cayenne', outline: 'none' },
+                  transition: 'colors'
+                })}
+                disabled={isCreating}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isCreating}
+              className={css({
+                w: 'full',
+                py: 4,
+                bg: 'cayenne',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: 'base',
+                rounded: 'lg',
+                mt: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 3,
+                opacity: isCreating ? 0.5 : 0.95,
+                _hover: { opacity: 0.9 },
+                _disabled: { cursor: 'not-allowed' },
+                transition: 'all'
+              })}
+            >
+              {isCreating ? (
+                <>
+                  <div className={css({ 
+                    animation: 'spin',
+                    w: 5,
+                    h: 5,
+                    border: '2px solid',
+                    borderColor: 'white/30',
+                    borderTopColor: 'white',
+                    rounded: 'full'
+                  })} />
+                  Creating Profile...
+                </>
+              ) : (
+                'Create Profile & Upload Samples'
+              )}
+            </button>
+          </form>
+
+          <div className={css({ 
+            mt: 8,
+            bg: 'gray.50',
+            border: '1px solid',
+            borderColor: 'gray.200',
+            rounded: 'lg',
+            p: 6
+          })}>
+            <h3 className={flex({ 
+              fontWeight: 'bold',
+              color: 'gray.900',
+              mb: 4,
+              alignItems: 'center',
+              gap: 2,
+              fontSize: 'base'
+            })}>
               💡 Tips for Best Results
             </h3>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start gap-2">
-                <span className="text-cayenne mt-1">•</span>
+            <ul className={css({ display: 'flex', flexDir: 'column', gap: 2, fontSize: 'sm', color: 'gray.600' })}>
+              <li className={flex({ alignItems: 'flex-start', gap: 2 })}>
+                <span className={css({ color: 'cayenne', mt: 1 })}>•</span>
                 <span>Upload at least 3-5 voice samples for better quality</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-cayenne mt-1">•</span>
+              <li className={flex({ alignItems: 'flex-start', gap: 2 })}>
+                <span className={css({ color: 'cayenne', mt: 1 })}>•</span>
                 <span>Each sample should be 10-30 seconds long</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-cayenne mt-1">•</span>
+              <li className={flex({ alignItems: 'flex-start', gap: 2 })}>
+                <span className={css({ color: 'cayenne', mt: 1 })}>•</span>
                 <span>Use clear audio with minimal background noise</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-cayenne mt-1">•</span>
+              <li className={flex({ alignItems: 'flex-start', gap: 2 })}>
+                <span className={css({ color: 'cayenne', mt: 1 })}>•</span>
                 <span>Supported formats: WAV, MP3, FLAC (Max 50MB per file)</span>
               </li>
             </ul>
           </div>
         </div>
       </div>
+
+      
     </div>
   );
 }

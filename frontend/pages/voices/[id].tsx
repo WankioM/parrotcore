@@ -1,178 +1,616 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { VoiceProfileStatus } from '@/lib/types/api';
+import { css } from '@/styled-system/css';
+import { flex, grid } from '@/styled-system/patterns';
+import { voicesService } from '@/lib/services/voices';
+import { VoiceProfile } from '@/lib/types/api';
 
 export default function VoiceDetail() {
   const router = useRouter();
   const { id } = router.query;
 
+  const [profile, setProfile] = useState<VoiceProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isEnrolling, setIsEnrolling] = useState(false);
 
-  // Mock data - will be replaced with API
-  const mockVoice = {
-    id: id as string,
-    name: 'My Voice',
-    status: 'pending' as VoiceProfileStatus, // <-- Fix here
-    sample_count: 0,
-    samples: [],
-  };
+  // Load voice profile
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!id || typeof id !== 'string') return;
+
+      try {
+        setIsLoading(true);
+        const data = await voicesService.getVoiceProfile(id);
+        setProfile(data);
+      } catch (err: any) {
+        console.error('Failed to load voice profile:', err);
+        setError('Failed to load voice profile');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [id]);
+
+  // Poll for enrollment status
+  useEffect(() => {
+    if (!profile || profile.status !== 'enrolling') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const updated = await voicesService.getVoiceProfile(profile.id);
+        setProfile(updated);
+        
+        if (updated.status !== 'enrolling') {
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error('Failed to poll enrollment status:', err);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [profile?.status, profile?.id]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !profile) return;
 
+    setError(null);
     setIsUploading(true);
-    // TODO: API integration with voicesService.uploadVoiceSample
-    
-    // Simulate upload
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setUploadProgress(i);
+
+    try {
+      for (const file of Array.from(files)) {
+        console.log(`📤 Uploading ${file.name}...`);
+        
+        await voicesService.uploadVoiceSample(
+          profile.id,
+          file,
+          (progress) => {
+            setUploadProgress(progress.percentage);
+          }
+        );
+
+        console.log(`✅ Uploaded ${file.name}`);
+      }
+
+      const updated = await voicesService.getVoiceProfile(profile.id);
+      setProfile(updated);
+      setUploadProgress(0);
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      setError(err.message || 'Failed to upload samples');
+    } finally {
+      setIsUploading(false);
     }
-    
-    setIsUploading(false);
-    setUploadProgress(0);
   };
 
   const handleEnroll = async () => {
-    // TODO: API integration with voicesService.enrollVoice
-    console.log('Starting enrollment for voice:', id);
+    if (!profile) return;
+
+    setError(null);
+    setIsEnrolling(true);
+
+    try {
+      console.log('🎓 Starting enrollment...');
+      await voicesService.enrollVoice(profile.id);
+      
+      const updated = await voicesService.getVoiceProfile(profile.id);
+      setProfile(updated);
+      
+      console.log('✅ Enrollment started!');
+    } catch (err: any) {
+      console.error('Enrollment failed:', err);
+      setError('Failed to start enrollment');
+    } finally {
+      setIsEnrolling(false);
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-white py-12">
-      <div className="editorial-section">
-        {/* Header */}
-        <div className="mb-12">
-          <Link href="/" className="text-gray-600 hover:text-cayenne transition-colors mb-6 inline-block">
-            ← Back to Home
-          </Link>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-5xl font-extrabold text-gray-900 mb-2">
-                {mockVoice.name}
-              </h1>
-              <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  mockVoice.status === 'ready' ? 'bg-green-100 text-green-800' :
-                  mockVoice.status === 'enrolling' ? 'bg-yellow-100 text-yellow-800' :
-                  mockVoice.status === 'failed' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {mockVoice.status === 'ready' ? '✓ Ready' :
-                   mockVoice.status === 'enrolling' ? '⏳ Training' :
-                   mockVoice.status === 'failed' ? '✗ Failed' :
-                   '📝 Pending'}
-                </span>
-                <span className="text-gray-600">
-                  {mockVoice.sample_count} samples uploaded
-                </span>
-              </div>
-            </div>
+  const handleDeleteSample = async (sampleId: string) => {
+    if (!profile) return;
 
-            {mockVoice.sample_count >= 3 && mockVoice.status === 'pending' && (
-              <button
-                onClick={handleEnroll}
-                className="px-6 py-3 bg-cayenne text-white font-bold rounded-lg
-                         hover:bg-cayenne transition-all shadow-lg"
-                style={{ opacity: 0.95 }}
-              >
-                Start Training
-              </button>
-            )}
+    try {
+      await voicesService.deleteVoiceSample(profile.id, sampleId);
+      
+      const updated = await voicesService.getVoiceProfile(profile.id);
+      setProfile(updated);
+    } catch (err: any) {
+      console.error('Failed to delete sample:', err);
+      setError('Failed to delete sample');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className={flex({ 
+        minH: 'screen',
+        alignItems: 'center',
+        justifyContent: 'center'
+      })}>
+        <div className={css({ 
+          animation: 'spin',
+          w: 12,
+          h: 12,
+          border: '4px solid',
+          borderColor: 'gray.200',
+          borderTopColor: 'cayenne',
+          rounded: 'full'
+        })} />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className={flex({ 
+        minH: 'screen',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDir: 'column',
+        gap: 4
+      })}>
+        <p className={css({ color: 'gray.600' })}>Voice profile not found</p>
+        <Link href="/" className={css({ 
+          color: 'cayenne',
+          _hover: { textDecoration: 'underline' }
+        })}>
+          ← Back to Home
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className={css({ minH: 'screen', bg: 'white', py: 12 })}>
+      <div className={css({ 
+        maxW: '80rem',
+        mx: 'auto',
+        px: { base: 4, lg: 6 }
+      })}>
+        {/* Back Link */}
+        <Link href="/" className={css({ 
+          display: 'inline-block',
+          color: 'gray.600',
+          mb: 8,
+          fontSize: 'sm',
+          _hover: { color: 'cayenne' },
+          transition: 'colors'
+        })}>
+          ← Back to Home
+        </Link>
+
+        {/* Title & Status */}
+        <div className={css({ mb: 8 })}>
+          <h1 className={css({ 
+            fontSize: { base: '4xl', lg: '5xl' },
+            fontWeight: 'extrabold',
+            color: 'gray.900',
+            mb: 4,
+            wordBreak: 'break-word'
+          })}>
+            {profile.name}
+          </h1>
+          <div className={flex({ 
+            alignItems: 'center', 
+            gap: 3,
+            flexWrap: 'wrap'
+          })}>
+            <span className={css({
+              px: 3,
+              py: 1,
+              rounded: 'full',
+              fontSize: 'sm',
+              fontWeight: 'semibold',
+              bg: profile.status === 'ready' ? 'green.100' :
+                  profile.status === 'enrolling' ? 'yellow.100' :
+                  profile.status === 'failed' ? 'red.100' : 'gray.100',
+              color: profile.status === 'ready' ? 'green.800' :
+                     profile.status === 'enrolling' ? 'yellow.800' :
+                     profile.status === 'failed' ? 'red.800' : 'gray.800'
+            })}>
+              {profile.status === 'ready' ? '✓ Ready' :
+               profile.status === 'enrolling' ? '⏳ Training' :
+               profile.status === 'failed' ? '✗ Failed' :
+               '📝 Pending'}
+            </span>
+            <span className={css({ color: 'gray.600', fontSize: 'sm' })}>
+              {profile.sample_count} samples uploaded
+            </span>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        {/* Action Button / Status Card */}
+        {profile.sample_count >= 3 && profile.status === 'pending' && (
+          <div className={css({ mb: 8 })}>
+            <button
+              onClick={handleEnroll}
+              disabled={isEnrolling}
+              className={css({
+                px: 6,
+                py: 3,
+                bg: 'cayenne',
+                color: 'white',
+                fontWeight: 'bold',
+                rounded: 'lg',
+                fontSize: 'base',
+                opacity: isEnrolling ? 0.5 : 0.95,
+                _hover: { opacity: 0.9 },
+                _disabled: { cursor: 'not-allowed' },
+                transition: 'all',
+                shadow: 'lg'
+              })}
+            >
+              {isEnrolling ? 'Starting Training...' : 'Start Training'}
+            </button>
+          </div>
+        )}
+
+        {profile.status === 'enrolling' && (
+          <div className={css({ 
+            bg: 'yellow.50',
+            px: 6,
+            py: 5,
+            rounded: 'xl',
+            border: '2px solid',
+            borderColor: 'yellow.300',
+            mb: 8
+          })}>
+            <div className={flex({ alignItems: 'center', gap: 3, mb: 4 })}>
+              <div className={css({ 
+                animation: 'spin',
+                w: 6,
+                h: 6,
+                border: '3px solid',
+                borderColor: 'yellow.300',
+                borderTopColor: 'yellow.600',
+                rounded: 'full'
+              })} />
+              <p className={css({ 
+                fontSize: 'lg',
+                fontWeight: 'bold',
+                color: 'yellow.900'
+              })}>
+                Training in progress...
+              </p>
+            </div>
+            {profile.latest_enrollment && (
+              <>
+                <div className={css({ mb: 3 })}>
+                  <div className={flex({ 
+                    justifyContent: 'space-between',
+                    fontSize: 'sm',
+                    color: 'yellow.800',
+                    mb: 2,
+                    fontWeight: 'medium'
+                  })}>
+                    <span>Progress</span>
+                    <span className={css({ fontWeight: 'bold' })}>
+                      {profile.latest_enrollment.progress_percent}%
+                    </span>
+                  </div>
+                  <div className={css({ 
+                    w: 'full',
+                    bg: 'yellow.100',
+                    rounded: 'full',
+                    h: 4,
+                    overflow: 'hidden'
+                  })}>
+                    <div 
+                      className={css({ 
+                        bg: 'yellow.500',
+                        h: 'full',
+                        transition: 'all 0.5s'
+                      })}
+                      style={{ width: `${profile.latest_enrollment.progress_percent}%` }}
+                    />
+                  </div>
+                </div>
+                <p className={css({ fontSize: 'sm', color: 'yellow.700' })}>
+                  ⏱️ This usually takes 2-5 minutes. You can leave and come back later.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {profile.status === 'failed' && (
+          <div className={css({ 
+            bg: 'red.50',
+            px: 6,
+            py: 5,
+            rounded: 'xl',
+            border: '2px solid',
+            borderColor: 'red.300',
+            mb: 8
+          })}>
+            <h3 className={css({ 
+              fontWeight: 'bold',
+              color: 'red.900',
+              mb: 2,
+              fontSize: 'lg'
+            })}>
+              ✗ Training Failed
+            </h3>
+            <p className={css({ color: 'red.800', mb: 4 })}>
+              {profile.latest_enrollment?.error_message || 'Something went wrong. Please try again.'}
+            </p>
+            <button
+              onClick={handleEnroll}
+              disabled={isEnrolling}
+              className={css({ 
+                px: 5,
+                py: 2,
+                bg: 'red.600',
+                color: 'white',
+                fontWeight: 'semibold',
+                rounded: 'lg',
+                fontSize: 'sm',
+                _hover: { bg: 'red.700' },
+                _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+                transition: 'all'
+              })}
+            >
+              {isEnrolling ? 'Retrying...' : 'Retry Training'}
+            </button>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className={css({ 
+            bg: 'red.50',
+            borderLeft: '4px solid',
+            borderColor: 'red.500',
+            p: 4,
+            mb: 8,
+            rounded: 'md'
+          })}>
+            <p className={css({ color: 'red.800', fontSize: 'sm', fontWeight: 'medium' })}>
+              {error}
+            </p>
+          </div>
+        )}
+
+        {/* Upload & Samples Grid */}
+        <div className={grid({ columns: { base: 1, lg: 2 }, gap: 8 })}>
           {/* Upload Section */}
-          <div className="bg-white border-2 border-gray-200 rounded-xl p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <div className={css({ 
+            bg: 'white',
+            border: '2px solid',
+            borderColor: 'gray.200',
+            rounded: 'xl',
+            p: 8
+          })}>
+            <h2 className={css({ 
+              fontSize: '2xl',
+              fontWeight: 'bold',
+              color: 'gray.900',
+              mb: 6
+            })}>
               🎤 Upload Voice Samples
             </h2>
 
-            {/* Upload Area */}
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center mb-6
-                          hover:border-cayenne transition-colors cursor-pointer">
+            <div className={css({ 
+              border: '2px dashed',
+              borderColor: 'gray.300',
+              rounded: 'xl',
+              p: 8,
+              textAlign: 'center',
+              mb: 6,
+              cursor: 'pointer',
+              _hover: { borderColor: 'cayenne' },
+              transition: 'colors'
+            })}>
               <input
                 type="file"
                 accept="audio/wav,audio/mp3,audio/mpeg,audio/flac"
                 multiple
                 onChange={handleFileUpload}
-                className="hidden"
+                className={css({ display: 'none' })}
                 id="file-upload"
-                disabled={isUploading}
+                disabled={isUploading || profile.status === 'enrolling'}
               />
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <div className="text-5xl mb-4">📁</div>
-                <p className="font-semibold text-gray-900 mb-2">
+              <label htmlFor="file-upload" className={css({ cursor: 'pointer' })}>
+                <div className={css({ fontSize: '5xl', mb: 4 })}>📁</div>
+                <p className={css({ fontWeight: 'semibold', color: 'gray.900', mb: 2 })}>
                   Click to upload or drag and drop
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className={css({ fontSize: 'sm', color: 'gray.600' })}>
                   WAV, MP3, or FLAC (max 50MB per file)
                 </p>
               </label>
             </div>
 
-            {/* Upload Progress */}
             {isUploading && (
-              <div className="mb-6">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <div className={css({ mb: 6 })}>
+                <div className={flex({ 
+                  justifyContent: 'space-between',
+                  fontSize: 'sm',
+                  color: 'gray.600',
+                  mb: 2
+                })}>
                   <span>Uploading...</span>
                   <span>{uploadProgress}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div className={css({ 
+                  w: 'full',
+                  bg: 'gray.200',
+                  rounded: 'full',
+                  h: 2,
+                  overflow: 'hidden'
+                })}>
                   <div 
-                    className="bg-cayenne h-full transition-all duration-300"
+                    className={css({ 
+                      bg: 'cayenne',
+                      h: 'full',
+                      transition: 'all 0.3s'
+                    })}
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
               </div>
             )}
-
-            {/* Record Audio Option */}
-            <button
-              className="w-full py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg
-                       hover:border-cayenne hover:text-cayenne transition-all"
-              disabled={isUploading}
-            >
-              🎙️ Record Audio
-            </button>
           </div>
 
           {/* Samples List */}
-          <div className="bg-white border-2 border-gray-200 rounded-xl p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <div className={css({ 
+            bg: 'white',
+            border: '2px solid',
+            borderColor: 'gray.200',
+            rounded: 'xl',
+            p: 8
+          })}>
+            <h2 className={css({ 
+              fontSize: '2xl',
+              fontWeight: 'bold',
+              color: 'gray.900',
+              mb: 6
+            })}>
               📋 Uploaded Samples
             </h2>
 
-            {mockVoice.samples.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-5xl mb-4">🎵</div>
-                <p className="text-gray-600">No samples uploaded yet</p>
-                <p className="text-sm text-gray-500 mt-2">
+            {profile.samples.length === 0 ? (
+              <div className={css({ textAlign: 'center', py: 12 })}>
+                <div className={css({ fontSize: '5xl', mb: 4 })}>🎵</div>
+                <p className={css({ color: 'gray.600' })}>No samples uploaded yet</p>
+                <p className={css({ fontSize: 'sm', color: 'gray.500', mt: 2 })}>
                   Upload at least 3 samples to start training
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {/* Sample items will go here */}
+              <div className={css({ display: 'flex', flexDir: 'column', gap: 3 })}>
+                {profile.samples.map((sample) => (
+                  <div 
+                    key={sample.id}
+                    className={flex({ 
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      p: 4,
+                      bg: 'gray.50',
+                      rounded: 'lg',
+                      border: '1px solid',
+                      borderColor: 'gray.200'
+                    })}
+                  >
+                    <div className={flex({ alignItems: 'center', gap: 3 })}>
+                      <span className={css({ fontSize: '2xl' })}>🎵</span>
+                      <div>
+                        <p className={css({ 
+                          fontWeight: 'medium',
+                          color: 'gray.900',
+                          fontSize: 'sm'
+                        })}>
+                          {sample.original_filename}
+                        </p>
+                        <p className={css({ fontSize: 'xs', color: 'gray.500' })}>
+                          {sample.duration_seconds.toFixed(1)}s
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteSample(sample.id)}
+                      className={css({ 
+                        color: 'red.600',
+                        fontSize: 'sm',
+                        fontWeight: 'medium',
+                        _hover: { color: 'red.800' }
+                      })}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Requirements Card */}
-        {mockVoice.sample_count < 3 && (
-          <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-            <h3 className="font-bold text-yellow-900 mb-2 flex items-center gap-2">
+        {/* Requirements Warning */}
+        {profile.sample_count < 3 && profile.status === 'pending' && (
+          <div className={css({ 
+            mt: 8,
+            bg: 'yellow.50',
+            border: '2px solid',
+            borderColor: 'yellow.300',
+            rounded: 'xl',
+            p: 6
+          })}>
+            <h3 className={css({ 
+              fontWeight: 'bold',
+              color: 'yellow.900',
+              mb: 2,
+              fontSize: 'base'
+            })}>
               ⚠️ Action Required
             </h3>
-            <p className="text-yellow-800">
-              You need at least {3 - mockVoice.sample_count} more voice sample(s) before you can start training.
+            <p className={css({ color: 'yellow.800' })}>
+              You need at least {3 - profile.sample_count} more voice sample(s) before you can start training.
             </p>
+          </div>
+        )}
+
+        {/* Success Card */}
+        {profile.status === 'ready' && (
+          <div className={css({ 
+            mt: 8,
+            bg: 'green.50',
+            border: '2px solid',
+            borderColor: 'green.300',
+            rounded: 'xl',
+            p: 6
+          })}>
+            <h3 className={css({ 
+              fontWeight: 'bold',
+              color: 'green.900',
+              mb: 2,
+              fontSize: 'lg'
+            })}>
+              ✅ Voice Model Ready!
+            </h3>
+            <p className={css({ color: 'green.800', mb: 4 })}>
+              Your voice has been successfully trained. Ready to create amazing content!
+            </p>
+            <div className={flex({ gap: 3, flexWrap: 'wrap' })}>
+                <Link 
+                href="/tts/new"
+                className={css({ 
+                  px: 5,
+                  py: 2,
+                  bg: 'green.600',
+                  color: 'white',
+                  fontWeight: 'semibold',
+                  rounded: 'lg',
+                  fontSize: 'sm',
+                  _hover: { bg: 'green.700' },
+                  transition: 'all'
+                })}
+              >
+                Try Text-to-Speech →
+              </Link>
+              <Link 
+                href="/covers/new"
+                className={css({ 
+                  px: 5,
+                  py: 2,
+                  border: '2px solid',
+                  borderColor: 'green.600',
+                  color: 'green.700',
+                  fontWeight: 'semibold',
+                  rounded: 'lg',
+                  fontSize: 'sm',
+                  _hover: { bg: 'green.50' },
+                  transition: 'all'
+                })}
+              >
+                Create AI Cover →
+              </Link>
+            </div>
           </div>
         )}
       </div>

@@ -1,22 +1,33 @@
 import React from 'react';
+import { css } from '@/styled-system/css';
 import { StudioCard } from '@/components/StudioCard';
-import { AudioVisualizer } from '../components/AudioVisualizer';
 
 export default function Home() {
   return (
-    <div className="bg-white">
+    <div className={css({ bg: 'white' })}>
       {/* Hero Section */}
-      <section className="editorial-section py-20">
-        <div className="text-center mb-16">
-          
-          <p className="text-2xl text-gray-600 mb-8">
+      <section className={css({ 
+        maxW: '80rem',
+        mx: 'auto',
+        px: { base: 6, lg: 8 },
+        py: 20
+      })}>
+        <div className={css({ textAlign: 'center', mb: 16 })}>
+          <p className={css({ 
+            fontSize: '2xl',
+            color: 'gray.600',
+            mb: 8
+          })}>
             AI Voice Cloning & Text-to-Speech Studio
           </p>
         </div>
 
-        
         {/* Studio Cards */}
-        <div className="creative-grid">
+        <div className={css({
+          display: 'grid',
+          gridTemplateColumns: { base: 1, md: 2, lg: 3 },
+          gap: 6
+        })}>
           <StudioCard 
             href="/voices/new"
             icon="🎤"
