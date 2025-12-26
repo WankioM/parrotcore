@@ -33,7 +33,15 @@ services:
     build:
       context: ../..
       dockerfile: infra/images/worker/Containerfile
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     environment:
+      - NVIDIA_VISIBLE_DEVICES=all
       - DEBUG=True
       - SECRET_KEY=dev-secret-key-change-in-prod
       - DATABASE_URL=postgres://parrot:parrot@postgres:5432/parrotcore
@@ -44,7 +52,7 @@ services:
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=parrotcore
       - TTS_MODEL=f5tts
-      - TTS_DEVICE=cpu
+      - TTS_DEVICE=cuda
     depends_on:
       postgres:
         condition: service_healthy
