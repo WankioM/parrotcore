@@ -4,6 +4,8 @@
 
 export type JobStatus = 'pending' | 'queued' | 'processing' | 'completed' | 'failed';
 export type VoiceProfileStatus = 'pending' | 'enrolling' | 'ready' | 'failed';
+export type VoiceSampleType = 'speaking' | 'singing';
+export type EnrollmentJobType = 'speaking' | 'singing';
 export type CoverStep = 'downloading' | 'separating' | 'converting' | 'mixing' | 'complete';
 
 export interface ErrorResponse {
@@ -27,6 +29,7 @@ export interface AudioFile {
 
 export interface VoiceSample {
   id: string;
+  sample_type: VoiceSampleType; // NEW: 'speaking' or 'singing'
   original_filename: string;
   duration_seconds: number;
   file_size_bytes: number;
@@ -38,25 +41,37 @@ export interface VoiceSample {
 
 export interface EnrollmentJob {
   id: string;
+  job_type: EnrollmentJobType; // NEW: 'speaking' or 'singing'
   status: JobStatus;
   progress_percent: number;
+  current_step: string; // NEW: e.g., "Training RVC model", "Processing samples"
   error_message: string | null;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  duration_seconds: number | null;
 }
 
 export interface VoiceProfile {
   id: string;
   name: string;
   description?: string;
-  status: VoiceProfileStatus;
-  sample_count: number;
-  total_duration: number;
+  
+  // NEW: Separate statuses for speaking and singing
+  speaking_status: VoiceProfileStatus;
+  singing_status: VoiceProfileStatus;
+  
+  // NEW: Separate sample counts
+  speaking_sample_count: number;
+  singing_sample_count: number;
+  
   created_at: string;
   updated_at: string;
-  samples: VoiceSample[];
-  latest_enrollment: EnrollmentJob | null;
+  
+  // Only present in detail view
+  samples?: VoiceSample[];
+  latest_speaking_job?: EnrollmentJob | null;
+  latest_singing_job?: EnrollmentJob | null;
 }
 
 export interface CreateVoiceProfileRequest {
@@ -173,5 +188,18 @@ export const FILE_CONSTRAINTS = {
     ALLOWED_EXTENSIONS: ['.wav', '.mp3', '.flac'],
   },
 } as const;
+
+// ============================================================================
+// UI Helper Types
+// ============================================================================
+
+export interface VoiceCapabilities {
+  canUseTTS: boolean;
+  canUseCovers: boolean;
+  speakingReady: boolean;
+  singingReady: boolean;
+  speakingInProgress: boolean;
+  singingInProgress: boolean;
+}
 
 export * from './api';
