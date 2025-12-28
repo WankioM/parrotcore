@@ -1,0 +1,12 @@
+FROM runpod/base:0.4.0-cuda11.8.0
+
+# Install Python dependencies
+RUN pip install --no-cache-dir torch runpod requests
+
+# Copy handler
+COPY runpod_handler_simple.py /app/handler.py
+
+WORKDIR /app
+
+# Start handler
+CMD ["python", "-u", "handler.py"]
