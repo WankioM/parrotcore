@@ -1,3 +1,4 @@
+// pages/covers/new.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -6,6 +7,12 @@ import { flex } from '@/styled-system/patterns';
 import { voicesService } from '@/lib/services/voices';
 import { coversService } from '@/lib/services/covers';
 import { VoiceProfile } from '@/lib/types/api';
+import { 
+  canUseCovers, 
+  getStatusBadgeStyles, 
+  getStatusEmoji, 
+  getStatusLabel 
+} from '@/lib/utils/voiceHelpers';
 
 export default function NewCover() {
   const router = useRouter();
@@ -19,18 +26,18 @@ export default function NewCover() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Load ready voice profiles
+  // Load voice profiles
   useEffect(() => {
     const loadVoices = async () => {
       try {
         setIsLoading(true);
         const allVoices = await voicesService.getVoiceProfiles();
-        const readyVoices = allVoices.filter(v => v.status === 'ready');
-        setVoices(readyVoices);
+        setVoices(allVoices);
         
-        // Auto-select first voice if available
-        if (readyVoices.length > 0) {
-          setSelectedVoiceId(readyVoices[0].id);
+        // Auto-select first ready voice
+        const readyVoice = allVoices.find(v => canUseCovers(v));
+        if (readyVoice) {
+          setSelectedVoiceId(readyVoice.id);
         }
       } catch (err: any) {
         console.error('Failed to load voices:', err);
@@ -46,8 +53,13 @@ export default function NewCover() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      setSongFile(files[0]);
-      setError(null);
+      try {
+        coversService.validateSongFile(files[0]);
+        setSongFile(files[0]);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message);
+      }
     }
   };
 
@@ -61,6 +73,13 @@ export default function NewCover() {
     
     if (!songFile) {
       setError('Please upload a song file');
+      return;
+    }
+
+    // Check if selected voice has singing ready
+    const selectedVoice = voices.find(v => v.id === selectedVoiceId);
+    if (selectedVoice && !canUseCovers(selectedVoice)) {
+      setError('Selected voice is not ready for covers');
       return;
     }
 
@@ -81,8 +100,6 @@ export default function NewCover() {
       );
       
       console.log('✅ Cover job created:', job.id);
-      
-      // Redirect to job status page
       router.push(`/covers/${job.id}`);
     } catch (err: any) {
       console.error('Failed to create cover job:', err);
@@ -111,7 +128,10 @@ export default function NewCover() {
     );
   }
 
-  if (voices.length === 0) {
+  const readyVoices = voices.filter(canUseCovers);
+  const notReadyVoices = voices.filter(v => !canUseCovers(v));
+
+  if (readyVoices.length === 0) {
     return (
       <div className={css({ minH: 'screen', bg: 'white', py: 12 })}>
         <div className={css({ 
@@ -138,17 +158,17 @@ export default function NewCover() {
             p: 8,
             textAlign: 'center'
           })}>
-            <div className={css({ fontSize: '5xl', mb: 4 })}>🎤</div>
+            <div className={css({ fontSize: '5xl', mb: 4 })}>🎵</div>
             <h2 className={css({ 
               fontSize: '2xl',
               fontWeight: 'bold',
               color: 'yellow.900',
               mb: 4
             })}>
-              No Voice Profiles Ready
+              No Singing Voices Ready
             </h2>
             <p className={css({ color: 'yellow.800', mb: 6 })}>
-              You need to create and train a voice profile before you can create AI covers.
+              You need to create and train a singing voice before you can create AI covers.
             </p>
             <Link 
               href="/voices/new"
@@ -205,7 +225,7 @@ export default function NewCover() {
             fontSize: 'lg',
             color: 'gray.600'
           })}>
-            Upload a song and convert the vocals to your trained voice
+            Upload a song and convert the vocals to your trained singing voice
           </p>
         </div>
 
@@ -219,7 +239,11 @@ export default function NewCover() {
             mb: 8,
             rounded: 'md'
           })}>
-            <p className={css({ color: 'red.800', fontSize: 'sm', fontWeight: 'medium' })}>
+            <p className={css({ 
+              color: 'red.800', 
+              fontSize: 'sm', 
+              fontWeight: 'medium' 
+            })}>
               {error}
             </p>
           </div>
@@ -237,61 +261,123 @@ export default function NewCover() {
           })}>
             {/* Voice Selection */}
             <div className={css({ mb: 8 })}>
-              <label 
-                htmlFor="voice-select"
-                className={css({ 
-                  display: 'block',
-                  fontWeight: 'bold',
-                  color: 'gray.900',
-                  mb: 3,
-                  fontSize: 'lg'
-                })}
-              >
-                Select Voice
+              <label className={css({ 
+                display: 'block',
+                fontWeight: 'bold',
+                color: 'gray.900',
+                mb: 3,
+                fontSize: 'lg'
+              })}>
+                Select Singing Voice
               </label>
-              <select
-                id="voice-select"
-                value={selectedVoiceId}
-                onChange={(e) => setSelectedVoiceId(e.target.value)}
-                disabled={isSubmitting}
-                className={css({ 
-                  w: 'full',
-                  px: 4,
-                  py: 3,
-                  border: '2px solid',
-                  borderColor: 'gray.300',
-                  rounded: 'lg',
-                  fontSize: 'base',
-                  _focus: { 
-                    outline: 'none',
-                    borderColor: 'cayenne'
-                  },
-                  _disabled: { 
-                    bg: 'gray.100',
-                    cursor: 'not-allowed'
-                  }
-                })}
-              >
-                {voices.map((voice) => (
-                  <option key={voice.id} value={voice.id}>
-                    {voice.name}
-                  </option>
+
+              {/* Ready Voices */}
+              <div className={css({ display: 'flex', flexDir: 'column', gap: 3, mb: 4 })}>
+                {readyVoices.map((voice) => (
+                  <label
+                    key={voice.id}
+                    className={css({
+                      display: 'block',
+                      p: 4,
+                      border: '2px solid',
+                      borderColor: selectedVoiceId === voice.id ? 'cayenne' : 'gray.200',
+                      rounded: 'lg',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      _hover: { borderColor: 'cayenne', bg: 'gray.50' },
+                    })}
+                  >
+                    <div className={flex({ alignItems: 'center', gap: 3 })}>
+                      <input
+                        type="radio"
+                        name="voice"
+                        value={voice.id}
+                        checked={selectedVoiceId === voice.id}
+                        onChange={(e) => setSelectedVoiceId(e.target.value)}
+                        className={css({ w: 4, h: 4 })}
+                      />
+                      <div className={flex({ flex: 1, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 })}>
+                        <div>
+                          <p className={css({ fontWeight: 'semibold' })}>{voice.name}</p>
+                          {voice.description && (
+                            <p className={css({ fontSize: 'sm', color: 'gray.600' })}>
+                              {voice.description}
+                            </p>
+                          )}
+                          <p className={css({ fontSize: 'xs', color: 'gray.500', mt: 1 })}>
+                            {voice.singing_sample_count} singing samples
+                          </p>
+                        </div>
+                        <span className={css(getStatusBadgeStyles(voice.singing_status))}>
+                          {getStatusEmoji(voice.singing_status)} {getStatusLabel(voice.singing_status)}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
                 ))}
-              </select>
+              </div>
+
+              {/* Not Ready Voices - Collapsible */}
+              {notReadyVoices.length > 0 && (
+                <details className={css({ mt: 4 })}>
+                  <summary className={css({ 
+                    fontSize: 'sm', 
+                    color: 'gray.600', 
+                    cursor: 'pointer', 
+                    _hover: { color: 'gray.900' } 
+                  })}>
+                    Show voices not ready for covers ({notReadyVoices.length})
+                  </summary>
+                  <div className={css({ display: 'flex', flexDir: 'column', gap: 3, mt: 3 })}>
+                    {notReadyVoices.map((voice) => (
+                      <div
+                        key={voice.id}
+                        className={css({ 
+                          p: 4, 
+                          border: '2px solid', 
+                          borderColor: 'gray.200', 
+                          rounded: 'lg', 
+                          opacity: 0.6 
+                        })}
+                      >
+                        <div className={flex({ justifyContent: 'space-between', alignItems: 'center', mb: 2 })}>
+                          <div>
+                            <p className={css({ fontWeight: 'semibold' })}>{voice.name}</p>
+                            <p className={css({ fontSize: 'xs', color: 'gray.500', mt: 1 })}>
+                              {voice.singing_sample_count} singing samples
+                            </p>
+                          </div>
+                          <span className={css(getStatusBadgeStyles(voice.singing_status))}>
+                            {getStatusEmoji(voice.singing_status)} {getStatusLabel(voice.singing_status)}
+                          </span>
+                        </div>
+                        <Link 
+                          href={`/voices/${voice.id}`}
+                          className={css({ 
+                            fontSize: 'sm', 
+                            color: 'cayenne', 
+                            fontWeight: 'medium', 
+                            _hover: { textDecoration: 'underline' } 
+                          })}
+                        >
+                          Complete speaking enrollment →
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
 
             {/* Song File Upload */}
             <div className={css({ mb: 8 })}>
-              <label 
-                htmlFor="song-upload"
-                className={css({ 
-                  display: 'block',
-                  fontWeight: 'bold',
-                  color: 'gray.900',
-                  mb: 3,
-                  fontSize: 'lg'
-                })}
-              >
+              <label className={css({ 
+                display: 'block',
+                fontWeight: 'bold',
+                color: 'gray.900',
+                mb: 3,
+                fontSize: 'lg'
+              })}>
                 Upload Song
               </label>
               
@@ -342,21 +428,17 @@ export default function NewCover() {
 
             {/* Pitch Shift Slider */}
             <div className={css({ mb: 8 })}>
-              <label 
-                htmlFor="pitch-shift"
-                className={css({ 
-                  display: 'block',
-                  fontWeight: 'bold',
-                  color: 'gray.900',
-                  mb: 3,
-                  fontSize: 'lg'
-                })}
-              >
+              <label className={css({ 
+                display: 'block',
+                fontWeight: 'bold',
+                color: 'gray.900',
+                mb: 3,
+                fontSize: 'lg'
+              })}>
                 Pitch Shift: {pitchShift > 0 ? '+' : ''}{pitchShift} semitones
               </label>
               <input
                 type="range"
-                id="pitch-shift"
                 min="-12"
                 max="12"
                 step="1"

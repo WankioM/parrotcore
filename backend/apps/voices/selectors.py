@@ -89,10 +89,16 @@ def get_voice_profile_stats(voice_profile: VoiceProfile) -> dict:
 
 
 def get_latest_enrollment_job(
-    voice_profile: VoiceProfile,
+    profile: VoiceProfile,
+    job_type: str  
 ) -> Optional[VoiceEnrollmentJob]:
-    """Get the most recent enrollment job for a profile."""
-    return voice_profile.enrollment_jobs.order_by("-created_at").first()
+    """Get the latest enrollment job for a profile and type."""
+    return (
+        VoiceEnrollmentJob.objects
+        .filter(voice_profile=profile, job_type=job_type)
+        .order_by('-created_at')
+        .first()
+    )
 
 
 def get_enrollment_job(job_id: UUID) -> Optional[VoiceEnrollmentJob]:

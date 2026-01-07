@@ -214,13 +214,14 @@ export function getVoiceTypeDescription(type: VoiceSampleType): string {
     : 'For AI song covers';
 }
 
+
 // Get sample requirements text
 export function getSampleRequirementsText(type: VoiceSampleType): string {
   const count = type === 'speaking' ? '3-5' : '5-10';
   const duration = type === 'speaking' ? '30-60 seconds' : '1-2 minutes';
   const purpose = type === 'speaking' 
     ? 'Clear speech samples work best for text-to-speech'
-    : 'Singing samples with good vocal clarity work best for covers';
+    : 'Upload samples of yourself singing the specific song you want to cover for optimal voice conversion quality';
   
   return `Upload ${count} samples, each ${duration} long. ${purpose}.`;
 }

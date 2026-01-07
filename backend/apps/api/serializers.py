@@ -16,6 +16,7 @@ class VoiceSampleSerializer(serializers.ModelSerializer):
         model = VoiceSample
         fields = [
             "id",
+            "sample_type",             # ADD THIS
             "original_filename",
             "duration_seconds",
             "file_size_bytes",
@@ -41,8 +42,10 @@ class VoiceEnrollmentJobSerializer(serializers.ModelSerializer):
         model = VoiceEnrollmentJob
         fields = [
             "id",
+            "job_type",           
             "status",
             "progress_percent",
+            "current_step",       
             "error_message",
             "created_at",
             "started_at",
@@ -54,9 +57,11 @@ class VoiceEnrollmentJobSerializer(serializers.ModelSerializer):
 class VoiceProfileSerializer(serializers.ModelSerializer):
     """Serializer for voice profiles."""
     samples = VoiceSampleSerializer(many=True, read_only=True)
-    sample_count = serializers.IntegerField(read_only=True)
+    speaking_sample_count = serializers.IntegerField(read_only=True)
+    singing_sample_count = serializers.IntegerField(read_only=True)
     total_duration = serializers.FloatField(read_only=True)
-    latest_enrollment = serializers.SerializerMethodField()
+    latest_speaking_job = serializers.SerializerMethodField()
+    latest_singing_job = serializers.SerializerMethodField()
     
     class Meta:
         model = VoiceProfile
@@ -64,23 +69,32 @@ class VoiceProfileSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "description",
-            "status",
-            "sample_count",
+            "speaking_status",         # NEW
+            "singing_status",          # NEW
+            "speaking_sample_count",   # NEW
+            "singing_sample_count",    # NEW
             "total_duration",
             "created_at",
             "updated_at",
             "samples",
-            "latest_enrollment",
+            "latest_speaking_job",     # NEW
+            "latest_singing_job",      # NEW
         ]
-        read_only_fields = ["id", "status", "created_at", "updated_at"]
+        read_only_fields = ["id", "speaking_status", "singing_status", "created_at", "updated_at"]
     
-    def get_latest_enrollment(self, obj) -> dict | None:
+    def get_latest_speaking_job(self, obj) -> dict | None:
         from apps.voices.selectors import get_latest_enrollment_job
-        job = get_latest_enrollment_job(obj)
+        job = get_latest_enrollment_job(obj, 'speaking')
         if job:
             return VoiceEnrollmentJobSerializer(job).data
         return None
-
+    
+    def get_latest_singing_job(self, obj) -> dict | None:
+        from apps.voices.selectors import get_latest_enrollment_job
+        job = get_latest_enrollment_job(obj, 'singing')
+        if job:
+            return VoiceEnrollmentJobSerializer(job).data
+        return None
 
 class VoiceProfileCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating voice profiles."""

@@ -1,0 +1,40 @@
+# ============================================
+# File: tts_engine/Dockerfile.runpod
+# Full RVC training image
+# ============================================
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    ffmpeg \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PyTorch with CUDA support
+RUN pip install --no-cache-dir \
+    torch==2.1.0 \
+    torchaudio==2.1.0 \
+    --index-url https://download.pytorch.org/whl/cu118
+
+# Install RunPod and other dependencies
+RUN pip install --no-cache-dir \
+    runpod \
+    requests \
+    numpy \
+    librosa \
+    soundfile
+
+# TODO: Install RVC dependencies
+# For now, we'll add them later when we integrate actual RVC
+
+# Copy handler
+COPY runpod_handler.py /app/handler.py
+
+# Start handler
+CMD ["python", "-u", "handler.py"]
+
+

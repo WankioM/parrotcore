@@ -1,3 +1,4 @@
+# backend\apps\api\views.py
 """API views."""
 import logging
 from uuid import UUID
@@ -11,16 +12,19 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.voices.models import VoiceProfile, VoiceProfileStatus
+from apps.voices.models import VoiceProfile, VoiceProfileStatus, SampleType
 from apps.voices.services import (
     VoiceProfileService,
     create_voice_profile,
     enroll_voice_profile,
+    enroll_speaking_voice,  
+    enroll_singing_voice,   
 )
 from apps.voices.selectors import (
     get_user_voice_profiles,
     get_voice_profile,
     get_ready_voice_profiles,
+    get_latest_enrollment_job,
 )
 from apps.tts.models import TTSJob, CoverJob
 from apps.tts.services import create_tts_job, create_cover_job
@@ -121,15 +125,19 @@ class VoiceProfileViewSet(viewsets.ViewSet):
     """
     API endpoints for voice profiles.
     
-    POST   /voices/              - Create new profile
-    GET    /voices/              - List user's profiles
-    GET    /voices/{id}/         - Get profile details
-    DELETE /voices/{id}/         - Delete profile
-    POST   /voices/{id}/samples/ - Upload sample
-    POST   /voices/{id}/enroll/  - Start enrollment
+    POST   /voices/                        - Create new profile
+    GET    /voices/                        - List user's profiles
+    GET    /voices/{id}/                   - Get profile details
+    DELETE /voices/{id}/                   - Delete profile
+    POST   /voices/{id}/samples/           - Upload sample (legacy)
+    POST   /voices/{id}/samples/speaking/  - Upload speaking sample
+    POST   /voices/{id}/samples/singing/   - Upload singing sample
+    POST   /voices/{id}/enroll/            - Start enrollment (legacy)
+    POST   /voices/{id}/enroll/speaking/   - Start speaking enrollment
+    POST   /voices/{id}/enroll/singing/    - Start singing enrollment
+    GET    /voices/{id}/jobs/{job_type}/   - Get enrollment job status
     """
     permission_classes = [IsAuthenticated]
-    # Don't set parser_classes at class level - let DRF use defaults (JSON)
     
     def list(self, request):
         """List all voice profiles for the current user."""
@@ -194,7 +202,31 @@ class VoiceProfileViewSet(viewsets.ViewSet):
     
     @action(detail=True, methods=["post"], parser_classes=[MultiPartParser, FormParser])
     def samples(self, request, pk=None):
-        """Upload a voice sample to a profile."""
+        """Upload a voice sample to a profile (legacy - defaults to speaking)."""
+        return self._upload_sample_internal(request, pk, SampleType.SPEAKING)
+    
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='samples/speaking',
+        parser_classes=[MultiPartParser, FormParser]
+    )
+    def upload_speaking_sample(self, request, pk=None):
+        """Upload a speaking voice sample."""
+        return self._upload_sample_internal(request, pk, SampleType.SPEAKING)
+    
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='samples/singing',
+        parser_classes=[MultiPartParser, FormParser]
+    )
+    def upload_singing_sample(self, request, pk=None):
+        """Upload a singing voice sample."""
+        return self._upload_sample_internal(request, pk, SampleType.SINGING)
+    
+    def _upload_sample_internal(self, request, pk, sample_type: str):
+        """Internal helper for uploading samples."""
         try:
             profile_id = UUID(pk)
         except ValueError:
@@ -210,33 +242,37 @@ class VoiceProfileViewSet(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
         
-        if profile.status not in [VoiceProfileStatus.PENDING, VoiceProfileStatus.FAILED]:
-            return Response(
-                {"error": "Cannot add samples to a profile that is enrolling or ready"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        
         serializer = VoiceSampleUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
         uploaded_file = serializer.validated_data["file"]
         
+        # Validate file size (50MB max)
+        max_size = 50 * 1024 * 1024
+        if uploaded_file.size > max_size:
+            return Response(
+                {'error': 'File size must be less than 50MB'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         # Upload to storage
-        storage_key = f"samples/{request.user.id}/{profile.id}/{uploaded_file.name}"
+        storage_key = f"samples/{request.user.id}/{profile.id}/{sample_type}/{uploaded_file.name}"
         storage.upload_fileobj(uploaded_file.file, storage_key, content_type=uploaded_file.content_type)
         
-        # Get audio duration (simplified - in production use proper audio analysis)
-        # For now, estimate based on file size (very rough)
-        estimated_duration = uploaded_file.size / (44100 * 2 * 2)  # Assume 44.1kHz, 16-bit, stereo
+        # Get audio duration (simplified)
+        estimated_duration = uploaded_file.size / (44100 * 2 * 2)
         
-        # Create sample record
+        # Create sample record with sample_type
         sample = VoiceProfileService.add_sample(
             voice_profile=profile,
             file_path=storage_key,
             original_filename=uploaded_file.name,
             duration_seconds=estimated_duration,
+            sample_type=sample_type,
             file_size_bytes=uploaded_file.size,
         )
+        
+        logger.info(f"Uploaded {sample_type} sample {sample.id} for profile {profile.id}")
         
         return Response(
             VoiceSampleSerializer(sample).data,
@@ -245,7 +281,7 @@ class VoiceProfileViewSet(viewsets.ViewSet):
     
     @action(detail=True, methods=["post"])
     def enroll(self, request, pk=None):
-        """Start voice enrollment for a profile."""
+        """Start voice enrollment for a profile (legacy - speaking only)."""
         try:
             profile_id = UUID(pk)
         except ValueError:
@@ -272,6 +308,100 @@ class VoiceProfileViewSet(viewsets.ViewSet):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+    
+    @action(detail=True, methods=['post'], url_path='enroll/speaking')
+    def enroll_speaking(self, request, pk=None):
+        """Start speaking voice enrollment (Chatterbox TTS)."""
+        try:
+            profile_id = UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid profile ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        profile = get_voice_profile(profile_id, user=request.user)
+        if not profile:
+            return Response(
+                {"error": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        
+        try:
+            job = enroll_speaking_voice(profile)
+            return Response(
+                VoiceEnrollmentJobSerializer(job).data,
+                status=status.HTTP_202_ACCEPTED,
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    
+    @action(detail=True, methods=['post'], url_path='enroll/singing')
+    def enroll_singing(self, request, pk=None):
+        """Start singing voice enrollment (RVC training)."""
+        try:
+            profile_id = UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid profile ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        profile = get_voice_profile(profile_id, user=request.user)
+        if not profile:
+            return Response(
+                {"error": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        
+        try:
+            job = enroll_singing_voice(profile)
+            return Response(
+                VoiceEnrollmentJobSerializer(job).data,
+                status=status.HTTP_202_ACCEPTED,
+            )
+        except ValueError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    
+    @action(detail=True, methods=['get'], url_path='jobs/(?P<job_type>[^/.]+)')
+    def get_enrollment_job(self, request, pk=None, job_type=None):
+        """Get the latest enrollment job for a profile."""
+        try:
+            profile_id = UUID(pk)
+        except ValueError:
+            return Response(
+                {"error": "Invalid profile ID"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        profile = get_voice_profile(profile_id, user=request.user)
+        if not profile:
+            return Response(
+                {"error": "Profile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        
+        if job_type not in ['speaking', 'singing']:
+            return Response(
+                {'error': 'job_type must be "speaking" or "singing"'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        job = get_latest_enrollment_job(profile, job_type)
+        
+        if not job:
+            return Response(
+                {'error': f'No {job_type} enrollment job found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        return Response(VoiceEnrollmentJobSerializer(job).data)
 
 
 # =============================================================================

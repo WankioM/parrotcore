@@ -12,10 +12,12 @@ import {
   VoiceCapabilities,
 } from '../types/api';
 
+const API_PREFIX = '/api/v1';
+
 export const voicesService = {
   // Get all voice profiles
   async getVoiceProfiles(): Promise<VoiceProfile[]> {
-    const response = await apiClient.get('/voices/');
+   const response = await apiClient.get(`/voices/`); 
     return response.data;
   },
 
@@ -28,7 +30,7 @@ export const voicesService = {
 
   // Create new voice profile
   async createVoiceProfile(data: CreateVoiceProfileRequest): Promise<VoiceProfile> {
-    const response = await apiClient.post('/voices/', data);
+    const response = await apiClient.post(`/voices/`, data);
     return response.data;
   },
 

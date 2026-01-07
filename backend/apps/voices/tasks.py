@@ -140,50 +140,82 @@ def run_singing_enrollment(self, job_id: str):
             singing_samples = profile.samples.filter(sample_type=SampleType.SINGING)
             total_samples = singing_samples.count()
             
+            # Validate sample count (RVC needs at least 3)
+            if total_samples < 3:
+                raise ValueError(
+                    f"RVC training requires at least 3 singing samples, got {total_samples}"
+                )
+            
             for idx, sample in enumerate(singing_samples, 1):
                 local_path = temp_path / sample.original_filename
                 storage.download_file(sample.file_path, local_path)
                 sample_paths.append(local_path)
                 
-                # Update progress
-                job.progress_percent = int((idx / total_samples) * 20)
+                # Update progress (0-10%)
+                job.progress_percent = int((idx / total_samples) * 10)
                 job.save(update_fields=["progress_percent"])
             
             # Train RVC model
-            job.current_step = "Training RVC model"
-            job.progress_percent = 20
+            job.current_step = "Starting RVC training (this will take 2-4 hours)"
+            job.progress_percent = 10
             job.save(update_fields=["current_step", "progress_percent"])
             
-            from tts_engine.models.rvc_wrapper import RVCWrapper
+            from tts_engine.models.rvc_trainer import RVCTrainer, TrainingConfig
             
-            rvc = RVCWrapper(device="cpu")  # Use CPU for now
-            model_local_path = temp_path / f"{profile.id}_rvc.pth"
+            # Configure for 6GB VRAM
+            config = TrainingConfig(
+            sample_rate=40000,
+            total_epochs=300,
+            batch_size=4,
+            save_frequency=50,
+            cache_data=False,
+            f0_method="rmvpe"  
+        )
+                    
+            trainer = RVCTrainer(
+    rvc_root=Path("/app/rvc_webui"),
+    device="cuda"
+)
             
-            # Progress callback
-            def progress_callback(current_step: str, percent: int):
-                job.current_step = current_step
-                job.progress_percent = 20 + int(percent * 0.7)  # 20-90%
+            model_local_path = temp_path / "voice_model.pth"
+            
+            # Progress callback for training steps
+            def progress_callback(description: str, percent: int):
+                # Map training progress to 10-95% range
+                mapped_percent = 10 + int(percent * 0.85)
+                job.current_step = description
+                job.progress_percent = mapped_percent
                 job.save(update_fields=["current_step", "progress_percent"])
+                logger.info(f"RVC training progress: {description} ({percent}%)")
             
-            result = rvc.train_model(
-                samples=sample_paths,
-                output_path=model_local_path,
-                progress_callback=progress_callback,
-            )
+            result = trainer.train_model(
+    samples=sample_paths,
+    output_path=model_local_path,
+    config=config,  # ✅ PASS CONFIG HERE
+    progress_callback=progress_callback,
+)
             
             if not result.success:
                 raise Exception(result.error_message or "RVC training failed")
             
-            job.progress_percent = 90
-            job.current_step = "Uploading model"
+            # Upload model
+            job.progress_percent = 95
+            job.current_step = "Uploading trained model"
             job.save(update_fields=["progress_percent", "current_step"])
             
-            # Upload model to storage
             model_key = f"models/{profile.user_id}/{profile.id}/rvc_model.pth"
-            storage.upload_file(model_local_path, model_key)
+            storage.upload_file(str(result.model_path), model_key)
+            
+            # Upload index if available
+            if result.index_path and result.index_path.exists():
+                index_key = f"models/{profile.user_id}/{profile.id}/rvc_model.index"
+                storage.upload_file(str(result.index_path), index_key)
+                logger.info(f"Uploaded RVC index: {index_key}")
             
             # Mark complete
             VoiceProfileService.mark_enrollment_complete(job, model_key)
+            
+            logger.info(f"✅ Singing enrollment completed for job {job_id}")
             
     except Exception as e:
         logger.exception(f"Singing enrollment failed for job {job_id}")
@@ -192,7 +224,6 @@ def run_singing_enrollment(self, job_id: str):
         # Retry on transient errors
         if self.request.retries < self.max_retries:
             raise self.retry(exc=e, countdown=60 * (self.request.retries + 1))
-
 
 # LEGACY: Keep for backward compatibility
 @shared_task(bind=True, max_retries=3)
