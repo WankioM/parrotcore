@@ -162,6 +162,9 @@ class RVCTrainer:
             # Stage 2: Preprocess audio
             if progress_callback:
                 progress_callback("Preprocessing audio", 10)
+
+                logs_dir = self.rvc_root / "logs" / model_name
+                logs_dir.mkdir(parents=True, exist_ok=True)
             
             success = self._run_script(
                 self.preprocess_script,
@@ -171,7 +174,7 @@ class RVCTrainer:
                     "2",  # num_processes
                     str(self.rvc_root / "logs" / model_name),
                     "False",  # use_diff
-                    "3.0"  # ✅ ADD THIS: high_pass_freq (3.0 Hz default)
+                    "3.0"  # 
                 ],
                 "Audio preprocessing"
             )
