@@ -23,6 +23,9 @@ staticfiles/
 .env.*.local
 .env.example
 
+#docker
+infra/docker/docker-compose.yml
+
 
 # IDE
 .idea/

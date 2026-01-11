@@ -1,7 +1,3 @@
-# ============================================
-# File: tts_engine/Dockerfile.runpod
-# Full RVC training image
-# ============================================
 FROM python:3.10-slim
 
 WORKDIR /app
@@ -12,29 +8,48 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     git \
     build-essential \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch with CUDA support
+# Install PyTorch with CUDA 11.8
 RUN pip install --no-cache-dir \
     torch==2.1.0 \
     torchaudio==2.1.0 \
     --index-url https://download.pytorch.org/whl/cu118
 
-# Install RunPod and other dependencies
+# Clone RVC-WebUI
+RUN git clone https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI.git /app/rvc_webui
+
+# Install RVC dependencies (Python 3.10 works with fairseq!)
 RUN pip install --no-cache-dir \
+    fairseq==0.12.2 \
+    av \
+    ffmpeg-python \
+    faiss-cpu \
+    praat-parselmouth \
+    pyworld \
+    librosa \
+    resampy \
     runpod \
     requests \
     numpy \
-    librosa \
     soundfile
 
-# TODO: Install RVC dependencies
-# For now, we'll add them later when we integrate actual RVC
+# Download pretrained models
+RUN mkdir -p /app/assets/pretrained_v2 && \
+    cd /app/assets/pretrained_v2 && \
+    wget -q https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0D40k.pth && \
+    wget -q https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0G40k.pth && \
+    wget -q https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0D48k.pth && \
+    wget -q https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/pretrained_v2/f0G48k.pth
 
-# Copy handler
-COPY runpod_handler.py /app/handler.py
+# Download HuBERT
+RUN mkdir -p /app/assets/hubert && \
+    cd /app/assets/hubert && \
+    wget -q https://huggingface.co/lj1995/VoiceConversionWebUI/resolve/main/hubert_base.pt
 
-# Start handler
+# Copy handler and RVC trainer
+COPY runpod_handler.py /app/runpod_handler.py
+COPY models/rvc_trainer.py /app/rvc_trainer.py
+
 CMD ["python", "-u", "handler.py"]
-
-

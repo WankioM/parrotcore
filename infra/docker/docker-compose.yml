@@ -53,6 +53,9 @@ services:
       - MINIO_BUCKET=parrotcore
       - TTS_MODEL=f5tts
       - TTS_DEVICE=cuda
+      - RUNPOD_API_KEY=${RUNPOD_API_KEY}
+      - RUNPOD_ENDPOINT_ID=3h90u2w2mxiw0h
+      - RUNPOD_TIMEOUT=7200
     depends_on:
       postgres:
         condition: service_healthy

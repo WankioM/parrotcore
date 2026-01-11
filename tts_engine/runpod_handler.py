@@ -112,30 +112,55 @@ def train_rvc_model(job_input: Dict) -> Dict:
             # Import RVC (after samples are downloaded, to save cold start time)
             print("\n🎤 Initializing RVC...")
             try:
-                # TODO: Import your actual RVC wrapper here
-                # from models.rvc_wrapper import RVCWrapper
-                # For now, we'll simulate training
-                print("⚠️  RVC wrapper not yet integrated")
-                print("   Simulating training for 5 seconds...")
+                import sys
+                sys.path.insert(0, '/app')  # Add to path
                 
-                import time
-                time.sleep(5)
+                from rvc_trainer import RVCTrainer, TrainingConfig
                 
-                # Create dummy model file
+                # Configure RVC training
+                config = TrainingConfig(
+                    sample_rate=40000,
+                    total_epochs=epochs,
+                    batch_size=batch_size,
+                    save_frequency=50,
+                    cache_data=False,
+                    f0_method="rmvpe"
+                )
+                
+                trainer = RVCTrainer(
+                    rvc_root=Path("/app/rvc_webui"),
+                    device=device
+                )
+                
+                print("✅ RVC trainer initialized")
+                
+                # Progress callback
+                def progress_callback(description: str, percent: int):
+                    print(f"📊 Progress: {description} ({percent}%)")
+                
+                # Train the actual RVC model
+                print(f"\n🔥 Training RVC model ({epochs} epochs)...")
                 model_path = tmpdir / "rvc_model.pth"
-                torch.save({
-                    'model_state': 'dummy',
-                    'training_config': {
-                        'samples': len(sample_paths),
-                        'epochs': epochs,
-                        'batch_size': batch_size
-                    }
-                }, model_path)
                 
-                print(f"✓ Training complete (simulated)")
+                result = trainer.train_model(
+                    samples=sample_paths,
+                    output_path=model_path,
+                    config=config,
+                    progress_callback=progress_callback
+                )
+                
+                if not result.success:
+                    raise Exception(result.error_message or "RVC training failed")
+                
+                # Use the actual trained model path
+                model_path = result.model_path
+                
+                print(f"✅ Training complete: {model_path}")
                 
             except ImportError as e:
                 raise RuntimeError(f"RVC dependencies not installed: {e}")
+            except Exception as e:
+                raise RuntimeError(f"RVC training failed: {e}")
             
             # Check model size
             model_size_mb = model_path.stat().st_size / 1024 / 1024

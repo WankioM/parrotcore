@@ -34,6 +34,16 @@ dependencies = [
     
     # Vocal Separation
     "demucs>=4.0",
+
+    # RVC Dependencies (NEW - these were missing)
+    "av>=16.0",                    # PyAV for audio/video processing
+    "ffmpeg-python>=0.2.0",        # Python wrapper for FFmpeg
+    "faiss-cpu>=1.7.3",            # Vector similarity search (for RVC index)
+    "praat-parselmouth>=0.4.3",    # Praat audio analysis
+    "pyworld>=0.3.2",              # World vocoder for pitch manipulation
+    "resampy>=0.4.3",              # Audio resampling
+    "scikit-maad>=1.5.1",          # Audio feature extraction
+    "gradio>=6.0",                 # UI framework (RVC uses this)
     
     # Auth
     "djangorestframework-simplejwt>=5.3",
